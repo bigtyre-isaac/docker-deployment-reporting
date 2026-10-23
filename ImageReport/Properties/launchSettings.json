@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ImageReport": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:20284;http://localhost:20285"
+    }
+  }
+}

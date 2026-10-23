@@ -1,0 +1,41 @@
+version: "3.8"
+services:
+  image-report:
+    image: ${IMAGE_REPORT_IMAGE:-registry.example.com/example/image-report:1.0.0}
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Swarm__Name: ${SWARM_NAME:-production}
+      Docker__Endpoint: unix:///var/run/docker.sock
+      Docker__TimeoutSeconds: "30"
+      Authentication__Issuer: ${JWT_ISSUER:-Example Authentication API}
+      Secrets__Directory: /run/secrets
+      Federation__TimeoutSeconds: "15"
+      Federation__AllowHttp: "false"
+      # Edit these trusted peers, or remove all peer entries for local-only reporting.
+      Federation__Peers__0__Name: factory
+      Federation__Peers__0__BaseUrl: https://factory-reports.example.com
+      Federation__Peers__1__Name: secondary
+      Federation__Peers__1__BaseUrl: https://secondary-reports.example.com
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      AllowedHosts: "*"
+    secrets:
+      - source: jwt-public-key
+        target: Authentication__PublicKey
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - gateway
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+networks:
+  gateway:
+    external: true
+    name: ${GATEWAY_NETWORK:-api-gateway}
+secrets:
+  jwt-public-key:
+    external: true
+    name: image-report-jwt-public-key

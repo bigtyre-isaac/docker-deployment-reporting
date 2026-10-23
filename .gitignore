@@ -1,0 +1,38 @@
+**/bin/
+**/obj/
+.vs/
+TestResults/
+*.user
+.dotnet/
+
+# Local environment files; sanitized templates may be committed.
+.env
+.env.*
+.envrc
+!.env.example
+!.env.template
+
+# Local secrets and machine credentials.
+secrets/
+.secrets/
+secrets.json
+*.secrets.json
+*.secret
+appsettings.Local.json
+appsettings.*.local.json
+.aws/
+.ssh/
+.azure/
+.docker/config.json
+
+# Keys and certificate bundles, including public PEM files used for local deployment.
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+id_ecdsa*
