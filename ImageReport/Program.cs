@@ -93,6 +93,8 @@ services.AddExceptionHandler<DockerExceptionHandler>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
