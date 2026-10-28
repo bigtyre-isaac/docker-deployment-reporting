@@ -3,11 +3,14 @@ services:
   image-report:
     image: ${IMAGE_REPORT_IMAGE:-registry.example.com/example/image-report:1.0.0}
     environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_HTTP_PORTS: "8080"
       Swarm__Name: ${SWARM_NAME:-production}
       Docker__Endpoint: unix:///var/run/docker.sock
       Docker__TimeoutSeconds: "30"
       Authentication__Issuer: ${JWT_ISSUER:-Example Authentication API}
+      Authentication__ApiBaseUrl: ${AUTH_API:-}
+      Authentication__ApiTimeoutSeconds: "15"
       Secrets__Directory: /run/secrets
       Federation__TimeoutSeconds: "15"
       Federation__AllowHttp: "false"

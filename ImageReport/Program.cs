@@ -1,5 +1,7 @@
 using Docker.DotNet;
 using ImageReport.Configuration;
+using ImageReport.Endpoints;
+using ImageReport.Models;
 using ImageReport.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -20,9 +22,32 @@ services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.MapInboundClaims = true;
         options.IncludeErrorDetails = false;
         options.TokenValidationParameters = validationParameters;
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrEmpty(context.Token)
+                    && context.Request.Cookies.TryGetValue(BrowserSessionCookie.Name, out var token))
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 services.AddAuthorization();
+services.AddValidation();
+
+services.AddSingleton(validationParameters);
+
+services.AddOptions<AuthenticationOptions>()
+    .BindConfiguration("Authentication")
+    .Validate(
+        options => options.IsValid(builder.Environment.IsDevelopment()),
+        "Authentication API settings must use an HTTPS base URL (or approved Development HTTP URL), end with a slash, and have a positive timeout.")
+    .ValidateOnStart();
 
 // Validate collection settings at startup, before handling reporting requests.
 services.AddOptions<SwarmOptions>()
@@ -83,9 +108,21 @@ services.AddHttpClient("Harbor", (provider, client) =>
         UseCookies = false
     });
 
+services.AddHttpClient("Authentication", (provider, client) =>
+    {
+        var options = provider.GetRequiredService<IOptions<AuthenticationOptions>>().Value;
+        client.Timeout = TimeSpan.FromSeconds(options.ApiTimeoutSeconds);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AllowAutoRedirect = false,
+        UseCookies = false
+    });
+
 services.AddScoped<DockerImageService>();
 services.AddScoped<FederationService>();
 services.AddScoped<HarborVulnerabilityService>();
+services.AddScoped<AuthenticationLoginService>();
 
 services.AddProblemDetails();
 services.AddExceptionHandler<DockerExceptionHandler>();
@@ -98,6 +135,8 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapAuthenticationRoutes();
+
 app.MapGet("/api/images", async (
     bool? includeFederated,
     bool? includeVulnerabilities,
@@ -109,6 +148,12 @@ app.MapGet("/api/images", async (
 {
     var localImages = await docker.CollectAsync(cancellationToken);
     var authorization = context.Request.Headers.Authorization.ToString();
+
+    if (string.IsNullOrWhiteSpace(authorization)
+        && context.Request.Cookies.TryGetValue(BrowserSessionCookie.Name, out var sessionToken))
+    {
+        authorization = $"Bearer {sessionToken}";
+    }
 
     var report = await federation.AggregateAsync(
         localImages,

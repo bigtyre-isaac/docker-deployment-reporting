@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Sign in | Swarm Image Report</title>
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/login.js" defer></script>
+</head>
+<body>
+  <main class="layout">
+    <section class="intro" aria-label="About Swarm Image Report">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5v-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="m5.5 7.8 6.5 3.4 6.5-3.4M12 11.5V19" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>Swarm Image Report</span>
+      </div>
+
+      <div class="intro-copy">
+        <p class="eyebrow">Deployment visibility</p>
+        <h1>Know what<br>is running.</h1>
+        <p class="intro-description">
+          Review deployed images across your Swarms and understand their vulnerability scan status.
+        </p>
+      </div>
+    </section>
+
+    <section class="form-panel" aria-labelledby="sign-in-heading">
+      <div class="form-content">
+        <h2 id="sign-in-heading">Welcome back</h2>
+        <p class="form-intro">Sign in with your account to continue to the image report.</p>
+
+        <form id="login-form">
+          <div class="field">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Enter your username"
+              required>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Enter your password"
+                required>
+              <button id="toggle-password" class="show-password" type="button" aria-controls="password" aria-pressed="false">
+                Show
+              </button>
+            </div>
+          </div>
+
+          <button class="sign-in" type="submit">Sign in</button>
+          <p id="setup-note" class="setup-note" role="status" aria-live="polite">
+            Sign in with your report account.
+          </p>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

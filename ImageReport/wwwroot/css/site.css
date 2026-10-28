@@ -251,6 +251,12 @@ input:focus {
   background: #1949b1;
 }
 
+.sign-in:disabled {
+  cursor: wait;
+  opacity: 0.7;
+  transform: none;
+}
+
 .sign-in:focus-visible,
 .show-password:focus-visible {
   outline: 3px solid #8daeff;
