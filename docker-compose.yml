@@ -12,6 +12,8 @@ services:
       Federation__TimeoutSeconds: "15"
       Federation__AllowHttp: "false"
       Harbor__BaseUrl: ${HARBOR_BASE_URL:-}
+      Harbor__Username: ${HARBOR_USERNAME:-}
+      Harbor__Password: ${HARBOR_PASSWORD:-}
       Harbor__TimeoutSeconds: "15"
       Harbor__AllowHttp: "false"
       # Edit these trusted peers, or remove all peer entries for local-only reporting.
