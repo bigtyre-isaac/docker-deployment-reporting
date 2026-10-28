@@ -61,7 +61,7 @@ public sealed class FederationService(
         {
             using var client = clients.CreateClient("Federation");
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                new Uri(new Uri(peer.BaseUrl), "/api/images?includeFederated=false"));
+                new Uri(new Uri(peer.BaseUrl), "/api/images?includeFederated=false&includeVulnerabilities=false"));
 
             request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorization);
 

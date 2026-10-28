@@ -82,3 +82,56 @@ public sealed class FederationPeer
     /// </summary>
     public string BaseUrl { get; set; } = "";
 }
+
+/// <summary>
+/// Configures read-only access to Harbor vulnerability reports.
+/// </summary>
+public sealed class HarborOptions
+{
+    /// <summary>
+    /// Harbor server origin, or an empty value to leave vulnerability counts unknown.
+    /// </summary>
+    public string BaseUrl { get; set; } = "";
+
+    /// <summary>
+    /// Optional Harbor robot account name loaded from configuration or a Swarm secret.
+    /// </summary>
+    public string? Username { get; set; }
+
+    /// <summary>
+    /// Optional Harbor robot account secret loaded from configuration or a Swarm secret.
+    /// </summary>
+    public string? Password { get; set; }
+
+    /// <summary>
+    /// Maximum duration of an individual Harbor request.
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// Explicitly permits HTTP for trusted internal development only.
+    /// </summary>
+    public bool AllowHttp { get; set; }
+
+    /// <summary>
+    /// Validates the Harbor origin and ensures credentials are supplied as a pair.
+    /// </summary>
+    public bool IsValid()
+    {
+        var credentialsArePaired = string.IsNullOrWhiteSpace(Username) == string.IsNullOrWhiteSpace(Password);
+
+        if (string.IsNullOrWhiteSpace(BaseUrl))
+        {
+            return credentialsArePaired && TimeoutSeconds > 0;
+        }
+
+        return credentialsArePaired
+            && TimeoutSeconds > 0
+            && Uri.TryCreate(BaseUrl, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttps || (AllowHttp && uri.Scheme == Uri.UriSchemeHttp))
+            && string.IsNullOrEmpty(uri.UserInfo)
+            && string.IsNullOrEmpty(uri.Query)
+            && string.IsNullOrEmpty(uri.Fragment)
+            && uri.AbsolutePath == "/";
+    }
+}

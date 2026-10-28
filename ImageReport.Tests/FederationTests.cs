@@ -25,7 +25,7 @@ public sealed class FederationTests
         var bothArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var factory = new StubHttpFactory(async (request, token) =>
         {
-            Assert.AreEqual("/api/images?includeFederated=false", request.RequestUri!.PathAndQuery);
+            Assert.AreEqual("/api/images?includeFederated=false&includeVulnerabilities=false", request.RequestUri!.PathAndQuery);
             Assert.AreEqual("Bearer test-token", request.Headers.Authorization!.ToString());
             if (Interlocked.Increment(ref arrived) == 2)
             {

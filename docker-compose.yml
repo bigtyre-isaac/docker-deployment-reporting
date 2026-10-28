@@ -11,6 +11,9 @@ services:
       Secrets__Directory: /run/secrets
       Federation__TimeoutSeconds: "15"
       Federation__AllowHttp: "false"
+      Harbor__BaseUrl: ${HARBOR_BASE_URL:-}
+      Harbor__TimeoutSeconds: "15"
+      Harbor__AllowHttp: "false"
       # Edit these trusted peers, or remove all peer entries for local-only reporting.
       Federation__Peers__0__Name: factory
       Federation__Peers__0__BaseUrl: https://factory-reports.example.com

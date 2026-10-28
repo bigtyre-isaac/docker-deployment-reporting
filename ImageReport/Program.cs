@@ -44,6 +44,11 @@ services.AddOptions<FederationOptions>()
     .Validate(options => options.IsValid(), "Federation peers must have unique names and trusted HTTPS origin URLs (or explicitly allowed HTTP).")
     .ValidateOnStart();
 
+services.AddOptions<HarborOptions>()
+    .BindConfiguration("Harbor")
+    .Validate(options => options.IsValid(), "Harbor settings must use a trusted HTTPS origin, provide paired credentials, and use a positive timeout.")
+    .ValidateOnStart();
+
 // Reuse the local Docker client and create outgoing peer clients through the HTTP client factory.
 services.AddSingleton<IDockerClient>(provider =>
 {
@@ -67,8 +72,20 @@ services.AddHttpClient("Federation", (provider, client) =>
         UseCookies = false
     });
 
+services.AddHttpClient("Harbor", (provider, client) =>
+    {
+        var options = provider.GetRequiredService<IOptions<HarborOptions>>().Value;
+        client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AllowAutoRedirect = false,
+        UseCookies = false
+    });
+
 services.AddScoped<DockerImageService>();
 services.AddScoped<FederationService>();
+services.AddScoped<HarborVulnerabilityService>();
 
 services.AddProblemDetails();
 services.AddExceptionHandler<DockerExceptionHandler>();
@@ -81,9 +98,11 @@ app.UseAuthorization();
 
 app.MapGet("/api/images", async (
     bool? includeFederated,
+    bool? includeVulnerabilities,
     HttpContext context,
     DockerImageService docker,
     FederationService federation,
+    HarborVulnerabilityService harbor,
     CancellationToken cancellationToken) =>
 {
     var localImages = await docker.CollectAsync(cancellationToken);
@@ -94,6 +113,12 @@ app.MapGet("/api/images", async (
         includeFederated ?? true,
         authorization,
         cancellationToken);
+
+    if (includeVulnerabilities ?? true)
+    {
+        var enrichedImages = await harbor.EnrichAsync(report.Images, cancellationToken);
+        report = report with { Images = enrichedImages };
+    }
 
     return Results.Ok(report);
 }).RequireAuthorization(policy => policy.RequireRole("ImageReport.Read"));
