@@ -543,13 +543,13 @@ async function loadReport() {
   reportErrors.hidePopover();
 
   try {
-    const response = await fetch("/api/images", {
+    const response = await fetch("api/images", {
       credentials: "same-origin",
       headers: { Accept: "application/json" }
     });
 
     if (response.status === 401) {
-      window.location.replace("/login.html");
+      window.location.replace("login.html");
       return;
     }
 
@@ -644,7 +644,7 @@ signOutButton.addEventListener("click", async () => {
   signOutButton.disabled = true;
 
   try {
-    const response = await fetch("/auth/logout", {
+    const response = await fetch("auth/logout", {
       method: "POST",
       credentials: "same-origin"
     });
@@ -655,7 +655,7 @@ signOutButton.addEventListener("click", async () => {
       return;
     }
 
-    window.location.replace("/login.html");
+    window.location.replace("login.html");
   } catch {
     reportStatus.dataset.state = "error";
     renderReportStatus("Could not reach the report service. Please try again.");

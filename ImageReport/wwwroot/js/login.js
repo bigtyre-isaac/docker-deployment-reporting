@@ -18,7 +18,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.disabled = true;
 
   try {
-    const response = await fetch("/auth/login", {
+    const response = await fetch("auth/login", {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -44,7 +44,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     password.value = "";
-    window.location.assign("/index.html");
+    window.location.assign("index.html");
   } catch (error) {
     setupNote.classList.add("error");
     setupNote.textContent = error instanceof TypeError
