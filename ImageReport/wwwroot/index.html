@@ -89,11 +89,19 @@
             <select id="filter-scan">
               <option value="">All scan status</option>
               <option value="complete">Scanned</option>
-              <option value="imageNotInHarbor">Not in Harbor</option>
-              <option value="harborUnavailable">Harbor unavailable</option>
+              <option value="imageNotInHarbor">Registry not matched</option>
               <option value="digestUnavailable">Digest unavailable</option>
               <option value="scanNotFound">Scan not found</option>
               <option value="harborNotConfigured">Harbor not configured</option>
+              <option value="harborAuthenticationFailed">Harbor authentication failed</option>
+              <option value="harborAccessDenied">Harbor access denied</option>
+              <option value="harborServerError">Harbor server error</option>
+              <option value="harborRequestRejected">Harbor rejected request</option>
+              <option value="harborTimeout">Harbor timed out</option>
+              <option value="harborConnectionFailed">Harbor connection failed</option>
+              <option value="harborResponseReadFailed">Harbor response unreadable</option>
+              <option value="invalidScanReport">Invalid scan report</option>
+              <option value="harborUnavailable">Harbor unavailable (legacy)</option>
               <option value="unknown">Reason unavailable</option>
             </select>
           </label>

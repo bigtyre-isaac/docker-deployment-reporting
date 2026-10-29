@@ -26,8 +26,16 @@ const severityLabels = {
 };
 const scanStatusLabels = {
   complete: "Scanned",
-  imageNotInHarbor: "Not in Harbor",
+  imageNotInHarbor: "Registry not matched",
   harborUnavailable: "Harbor unavailable",
+  harborAuthenticationFailed: "Harbor authentication failed",
+  harborAccessDenied: "Harbor access denied",
+  harborServerError: "Harbor server error",
+  harborRequestRejected: "Harbor rejected request",
+  harborTimeout: "Harbor timed out",
+  harborConnectionFailed: "Harbor connection failed",
+  harborResponseReadFailed: "Harbor response unreadable",
+  invalidScanReport: "Invalid scan report",
   digestUnavailable: "Digest unavailable",
   scanNotFound: "Scan not found",
   harborNotConfigured: "Harbor not configured",
@@ -35,8 +43,16 @@ const scanStatusLabels = {
 };
 const scanStatusDescriptions = {
   complete: "A Harbor vulnerability report is available.",
-  imageNotInHarbor: "The image repository does not match a configured Harbor repository.",
+  imageNotInHarbor: "The image registry does not match the configured Harbor address.",
   harborUnavailable: "Harbor could not provide vulnerability scan data.",
+  harborAuthenticationFailed: "Harbor rejected the configured credentials.",
+  harborAccessDenied: "The configured Harbor account does not have permission to read this report.",
+  harborServerError: "Harbor returned a server error.",
+  harborRequestRejected: "Harbor rejected the vulnerability report request.",
+  harborTimeout: "Harbor did not respond before the request timed out.",
+  harborConnectionFailed: "The report service could not connect to Harbor.",
+  harborResponseReadFailed: "The report service could not read Harbor's response.",
+  invalidScanReport: "Harbor returned a response that was not a valid vulnerability report.",
   digestUnavailable: "A digest was not available for the Harbor lookup.",
   scanNotFound: "Harbor has no vulnerability report for this image digest.",
   harborNotConfigured: "Harbor vulnerability lookup is not configured.",
@@ -294,7 +310,15 @@ function createImageRow(image) {
     `scan-status ${isScanned ? "is-available" : "is-unknown"}`,
     scanStatusLabels[scanStatus]
   );
-  statusElement.title = scanStatusDescriptions[scanStatus];
+  statusElement.title = image.vulnerabilities?.detail
+    ? `${scanStatusDescriptions[scanStatus]} ${image.vulnerabilities.detail}`
+    : scanStatusDescriptions[scanStatus];
+  if (scanStatus === "harborServerError" || scanStatus === "harborRequestRejected") {
+    const httpStatus = image.vulnerabilities?.detail?.match(/^HTTP (\d{3})/)?.[1];
+    if (httpStatus) {
+      statusElement.textContent = `Harbor HTTP ${httpStatus}`;
+    }
+  }
   scanCell.append(statusElement);
 
   const distributionCell = document.createElement("td");
