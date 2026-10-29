@@ -3,8 +3,122 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Image Report | Swarm Image Report</title>
+  <meta name="color-scheme" content="light">
+  <title>Swarm image report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/report.js" defer></script>
 </head>
-<body>
+<body class="report-page">
+  <main class="report-layout">
+    <div class="report-toolbar" aria-label="Report actions">
+      <button id="sign-out" class="sign-out" type="button">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M8 3.5H4.75A1.75 1.75 0 0 0 3 5.25v9.5c0 .97.78 1.75 1.75 1.75H8m4-3 3.5-3.5L12 6.5M7 10h8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Sign out</span>
+      </button>
+      <div class="page-actions">
+        <span id="report-updated" class="updated-at"></span>
+        <button id="refresh-report" class="refresh-button" type="button">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M16.25 10a6.25 6.25 0 1 1-1.83-4.42M16.25 4.5v3.75H12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Refresh report</span>
+        </button>
+      </div>
+    </div>
+
+    <section class="summary" aria-label="Report summary">
+      <div class="summary-cell">
+        <span class="summary-label">Services</span>
+        <strong id="summary-services" class="summary-value">-</strong>
+        <p class="summary-note"><span id="summary-swarms">-</span> Swarms</p>
+      </div>
+      <div class="summary-cell">
+        <span class="summary-label">Scan coverage</span>
+        <strong class="summary-value"><span id="summary-scanned">-</span> <small>of <span id="summary-total">-</span></small></strong>
+        <p id="summary-unknown-note" class="summary-note is-warning"><span id="summary-unknown">-</span> without a scan result</p>
+      </div>
+      <div class="summary-cell summary-findings">
+        <div class="summary-findings-head">
+          <span class="summary-label">Vulnerabilities in scanned services</span>
+          <span class="summary-findings-total"><span id="summary-vulns">-</span> total</span>
+        </div>
+        <div id="summary-bar" class="severity-bar severity-bar-lg is-empty" role="img" aria-label="Vulnerability distribution across scanned services"></div>
+        <dl class="severity-legend">
+          <div class="legend-critical"><dt>Critical</dt><dd id="summary-critical">-</dd></div>
+          <div class="legend-high"><dt>High</dt><dd id="summary-high">-</dd></div>
+          <div class="legend-medium"><dt>Medium</dt><dd id="summary-medium">-</dd></div>
+          <div class="legend-low"><dt>Low</dt><dd id="summary-low">-</dd></div>
+          <div class="legend-negligible"><dt>Negligible</dt><dd id="summary-negligible">-</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <div id="report-errors" class="report-errors" role="alert"></div>
+
+    <section class="report-panel" aria-labelledby="inventory-heading">
+      <div class="report-panel-heading">
+        <div class="report-panel-title">
+          <h2 id="inventory-heading">Running services</h2>
+          <p id="report-status" class="report-status" role="status" aria-live="polite">Loading deployed images…</p>
+        </div>
+        <div class="report-filters" role="search" aria-label="Filter deployed images">
+          <label class="filter-search">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <circle cx="8.75" cy="8.75" r="5.75" stroke="currentColor" stroke-width="1.6"/>
+              <path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="visually-hidden">Search services or images</span>
+            <input id="filter-search" type="search" placeholder="Search services or images">
+          </label>
+          <label class="filter-select">
+            <span class="visually-hidden">Filter by Swarm</span>
+            <select id="filter-swarm">
+              <option value="">All Swarms</option>
+            </select>
+          </label>
+          <label class="filter-select">
+            <span class="visually-hidden">Filter by scan status</span>
+            <select id="filter-scan">
+              <option value="">All scan status</option>
+              <option value="complete">Scanned</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+          <button id="clear-filters" class="clear-filters" type="button" hidden>Clear filters</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="image-table" aria-label="Running services">
+          <colgroup>
+            <col class="col-service">
+            <col class="col-image">
+            <col class="col-scan">
+            <col class="col-bar">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Service</th>
+              <th scope="col">Image</th>
+              <th scope="col">Scan</th>
+              <th scope="col">Vulnerability distribution</th>
+            </tr>
+          </thead>
+          <tbody id="image-cards" aria-live="polite"></tbody>
+        </table>
+      </div>
+      <footer class="report-panel-footer">
+        <span>Unknown means no scan result is available for that image yet.</span>
+        <span id="report-row-count"></span>
+      </footer>
+    </section>
+  </main>
 </body>
 </html>

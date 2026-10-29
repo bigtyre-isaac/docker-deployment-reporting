@@ -152,7 +152,7 @@ app.MapGet("/api/images", async (
     if (string.IsNullOrWhiteSpace(authorization)
         && context.Request.Cookies.TryGetValue(BrowserSessionCookie.Name, out var sessionToken))
     {
-        authorization = $"Bearer {sessionToken}";
+        authorization = string.Concat("Bearer ", sessionToken);
     }
 
     var report = await federation.AggregateAsync(

@@ -9,6 +9,7 @@ using ImageReport.Models;
 using ImageReport.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -26,21 +27,30 @@ public sealed class AuthenticationLoginTests
     [TestMethod]
     public void AuthenticationApiBaseUrlAllowsHttpOnlyForApprovedDevelopmentHosts()
     {
-        Assert.IsFalse(Program.IsValidAuthenticationApiBaseUrl(
-            "http://host.docker.internal:44122/api/",
-            isDevelopment: false));
+        Assert.IsFalse(new AuthenticationOptions
+        {
+            ApiBaseUrl = "http://host.docker.internal:44122/api/"
+        }.IsValid(isDevelopment: false));
 
-        Assert.IsTrue(Program.IsValidAuthenticationApiBaseUrl(
-            "http://host.docker.internal:44122/api/",
-            isDevelopment: true));
+        Assert.IsTrue(new AuthenticationOptions
+        {
+            ApiBaseUrl = "http://host.docker.internal:44122/api/"
+        }.IsValid(isDevelopment: true));
 
-        Assert.IsFalse(Program.IsValidAuthenticationApiBaseUrl(
-            "http://host.docker.internal:44122/api",
-            isDevelopment: true));
+        Assert.IsFalse(new AuthenticationOptions
+        {
+            ApiBaseUrl = "http://host.docker.internal:44122/api",
+        }.IsValid(isDevelopment: true));
 
-        Assert.IsFalse(Program.IsValidAuthenticationApiBaseUrl(
-            "http://auth.example.com/api/",
-            isDevelopment: true));
+        Assert.IsFalse(new AuthenticationOptions
+        {
+            ApiBaseUrl = "http://auth.example.com/api/"
+        }.IsValid(isDevelopment: true));
+
+        Assert.IsFalse(new AuthenticationOptions
+        {
+            ApiTimeoutSeconds = 0
+        }.IsValid(isDevelopment: true));
     }
 
     /// <summary>
@@ -148,12 +158,10 @@ public sealed class AuthenticationLoginTests
 
         return new AuthenticationLoginService(
             factory,
-            new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Authentication:ApiBaseUrl"] = "https://auth.example.com/api/"
-                })
-                .Build(),
+            Options.Create(new AuthenticationOptions
+            {
+                ApiBaseUrl = "https://auth.example.com/api/"
+            }),
             JwtConfiguration.CreateValidationParameters(configuration),
             NullLogger<AuthenticationLoginService>.Instance);
     }
