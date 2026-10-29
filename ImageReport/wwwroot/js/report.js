@@ -162,11 +162,6 @@ function connectDigestDetails(trigger, details, imageReference) {
 
 function createDigestComparison(image, imageReference) {
   const registryMatched = image.harborRegistryMatched;
-  const registryLabel = registryMatched === true
-    ? "Harbor registry matched"
-    : registryMatched === false
-      ? "Harbor registry not matched"
-      : "Harbor registry not checked";
   const imageUpdate = image.imageUpdate ?? {};
   const updateStatus = ["upToDate", "updateAvailable"].includes(imageUpdate.status)
     ? imageUpdate.status
@@ -184,14 +179,6 @@ function createDigestComparison(image, imageReference) {
     && image.localRepoDigest
     && image.digest === image.localRepoDigest
   );
-  const digestLabel = image.digest && image.localRepoDigest
-    ? digestMatches
-      ? "Image and local digests match"
-      : "Image and local digests differ"
-    : "Image and local digests could not be compared";
-  const digestStatus = image.digest && image.localRepoDigest
-    ? digestMatches ? "match" : "mismatch"
-    : "unchecked";
   const container = document.createElement("div");
   container.className = "digest-comparison";
 
@@ -219,22 +206,31 @@ function createDigestComparison(image, imageReference) {
   details.setAttribute("aria-label", "Image update and digest details");
   details.append(
     createTextElement("strong", `digest-details-status is-${updateStatus}`, updateDescription),
-    createTextElement(
-      "span",
-      `digest-details-status is-${registryMatched === true ? "match" : registryMatched === false ? "mismatch" : "unchecked"}`,
-      registryLabel
-    ),
-    createTextElement("span", `digest-details-status is-${digestStatus}`, digestLabel),
     createImageIdentifier(
       "Image reference",
       image.image ?? image.repository ?? "Image reference unavailable",
       "image reference"
-    ),
-    createImageIdentifier("Image ref digest", image.digest, "image reference digest"),
-    createImageIdentifier("Local repo digest", image.localRepoDigest, "local repository digest"),
-    createImageIdentifier("Current Harbor tag digest", imageUpdate.currentDigest, "current Harbor tag digest"),
-    createImageIdentifier("Local image ID", image.localImageId, "local image ID")
+    )
   );
+
+  if (image.localRepoDigest) {
+    const localDigestLabel = digestMatches
+      ? "Local repo digest (matches image ref)"
+      : "Local repo digest";
+    details.append(createImageIdentifier(localDigestLabel, image.localRepoDigest, "local repository digest"));
+  }
+
+  if (imageUpdate.currentDigest) {
+    details.append(createImageIdentifier(
+      "Current Harbor tag digest",
+      imageUpdate.currentDigest,
+      "current Harbor tag digest"
+    ));
+  }
+
+  if (image.localImageId) {
+    details.append(createImageIdentifier("Local image ID", image.localImageId, "local image ID"));
+  }
 
   trigger.setAttribute("aria-controls", details.id);
   imageReference.tabIndex = 0;
@@ -253,12 +249,10 @@ function createDigestComparison(image, imageReference) {
 function createRegistryMismatchIndicator() {
   const indicator = document.createElement("span");
   indicator.className = "harbor-registry-mismatch";
+  const label = "Local image is not from the configured Harbor registry.";
   indicator.setAttribute("role", "img");
-  indicator.setAttribute(
-    "aria-label",
-    "Local image is not from the configured Harbor registry."
-  );
-  indicator.title = "Local image is not from the configured Harbor registry.";
+  indicator.setAttribute("aria-label", label);
+  indicator.title = label;
   indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 21h10M9 21l1.5-11h3L15 21M10.5 10 8 6h8l-2.5 4M8 6 5 4m11 2 3-2M12 3V1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="m5 5 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   return indicator;
 }
