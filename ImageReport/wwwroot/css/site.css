@@ -1513,6 +1513,12 @@ input:focus {
   line-height: 1.35;
 }
 
+.image-reference:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid #6b91ce;
+  outline-offset: 2px;
+}
+
 .copy-image-button {
   width: 26px;
   height: 26px;
@@ -1550,11 +1556,40 @@ input:focus {
   outline-offset: 2px;
 }
 
-.image-identifiers {
-  min-width: 0;
+.digest-comparison {
+  display: flex;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.digest-comparison-status {
+  width: 23px;
+  height: 23px;
   display: grid;
-  gap: 2px;
-  margin-top: 5px;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: help;
+}
+
+.digest-comparison-status svg {
+  width: 20px;
+  height: 20px;
+}
+
+.digest-comparison-status.is-match {
+  color: #168263;
+}
+
+.digest-comparison-status.is-mismatch {
+  color: #df8b16;
+}
+
+.digest-comparison-status:focus-visible {
+  outline: 2px solid #6b91ce;
+  outline-offset: 2px;
 }
 
 .image-identifier {
@@ -1584,6 +1619,63 @@ input:focus {
   color: #58677c;
   font: inherit;
   text-overflow: ellipsis;
+}
+
+.digest-details[popover] {
+  position: fixed;
+  inset: auto;
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 24px));
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #dfe5ec;
+  border-radius: 9px;
+  color: #303b4b;
+  background: #fff;
+  box-shadow: 0 10px 28px rgb(22 39 61 / 18%);
+}
+
+.digest-details::backdrop {
+  background: transparent;
+}
+
+.digest-details-status {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.digest-details-status.is-match {
+  color: #168263;
+}
+
+.digest-details-status.is-mismatch {
+  color: #a45b0a;
+}
+
+.digest-details .image-identifier {
+  min-height: 28px;
+  align-items: flex-start;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-top: 1px solid #eef1f5;
+  font-size: 11px;
+}
+
+.digest-details .image-identifier-label {
+  width: 138px;
+  color: #6f7e93;
+  font-size: 10px;
+}
+
+.digest-details .image-identifier-value {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  text-overflow: clip;
 }
 
 .image-identifier .copy-image-button {

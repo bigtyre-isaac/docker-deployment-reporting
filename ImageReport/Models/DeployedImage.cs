@@ -11,6 +11,11 @@ public sealed record DeployedImage(string Swarm, string Service, string Image, s
     public string? LocalImageId { get; init; }
 
     /// <summary>
+    /// Local repository digest matching the deployed repository, when available.
+    /// </summary>
+    public string? LocalRepoDigest { get; init; }
+
+    /// <summary>
     /// Vulnerability scan status, reason, and counts by severity.
     /// </summary>
     public VulnerabilitySummary Vulnerabilities { get; init; } = new(

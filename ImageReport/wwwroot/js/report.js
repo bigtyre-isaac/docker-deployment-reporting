@@ -28,6 +28,7 @@ const severityLabels = {
 let allImages = [];
 let sortField = "critical";
 let sortDirection = -1;
+let nextDigestDetailsId = 0;
 
 function createTextElement(tagName, className, text) {
   const element = document.createElement(tagName);
@@ -62,6 +63,117 @@ function createImageIdentifier(label, value, copyLabel) {
   }
 
   return identifier;
+}
+
+function positionDigestDetails(trigger, details) {
+  const triggerBounds = trigger.getBoundingClientRect();
+  const detailsBounds = details.getBoundingClientRect();
+  const left = Math.max(
+    12,
+    Math.min(triggerBounds.left, window.innerWidth - detailsBounds.width - 12)
+  );
+  const top = triggerBounds.bottom + detailsBounds.height + 12 <= window.innerHeight
+    ? triggerBounds.bottom + 6
+    : Math.max(12, triggerBounds.top - detailsBounds.height - 6);
+
+  details.style.left = `${left}px`;
+  details.style.top = `${top}px`;
+}
+
+function connectDigestDetails(trigger, details, imageReference) {
+  let closeTimer;
+  const targets = [trigger, imageReference];
+
+  const show = event => {
+    window.clearTimeout(closeTimer);
+    if (!details.matches(":popover-open")) {
+      details.showPopover();
+    }
+    for (const target of targets) {
+      target.setAttribute("aria-expanded", "true");
+    }
+    positionDigestDetails(event.currentTarget, details);
+  };
+
+  const scheduleClose = () => {
+    window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(() => {
+      const pointerIsInside = targets.some(target => target.matches(":hover"));
+      const focusIsInside = targets.includes(document.activeElement)
+        || details.contains(document.activeElement);
+      if (!pointerIsInside && !details.matches(":hover") && !focusIsInside) {
+        details.hidePopover();
+        for (const target of targets) {
+          target.setAttribute("aria-expanded", "false");
+        }
+      }
+    }, 140);
+  };
+
+  details.addEventListener("toggle", () => {
+    for (const target of targets) {
+      target.setAttribute("aria-expanded", String(details.matches(":popover-open")));
+    }
+  });
+  for (const target of targets) {
+    target.addEventListener("pointerenter", show);
+    target.addEventListener("pointerleave", scheduleClose);
+    target.addEventListener("focus", show);
+    target.addEventListener("blur", scheduleClose);
+  }
+  details.addEventListener("pointerenter", () => window.clearTimeout(closeTimer));
+  details.addEventListener("pointerleave", scheduleClose);
+  details.addEventListener("focusout", scheduleClose);
+}
+
+function createDigestComparison(image, imageReference) {
+  const matches = Boolean(
+    image.digest
+    && image.localRepoDigest
+    && image.digest === image.localRepoDigest
+  );
+  const status = matches ? "match" : "mismatch";
+  const label = matches ? "Harbor and local digests match" : "Harbor and local digests do not match";
+  const container = document.createElement("div");
+  container.className = "digest-comparison";
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = `digest-comparison-status is-${status}`;
+  trigger.setAttribute("aria-label", `${label}. Hover or focus to view digest details.`);
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.innerHTML = matches
+    ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m6 10 2.5 2.5L14 7" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m7 7 6 6m0-6-6 6" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+  const details = document.createElement("div");
+  details.id = `digest-details-${nextDigestDetailsId++}`;
+  details.className = "digest-details";
+  details.setAttribute("popover", "manual");
+  details.setAttribute("role", "dialog");
+  details.setAttribute("aria-label", "Image digest details");
+  details.append(
+    createTextElement("strong", `digest-details-status is-${status}`, label),
+    createImageIdentifier(
+      "Image reference",
+      image.image ?? image.repository ?? "Image reference unavailable",
+      "image reference"
+    ),
+    createImageIdentifier("Harbor digest", image.digest, "Harbor digest"),
+    createImageIdentifier("Local repo digest", image.localRepoDigest, "local repository digest"),
+    createImageIdentifier("Local image ID", image.localImageId, "local image ID")
+  );
+
+  trigger.setAttribute("aria-controls", details.id);
+  imageReference.tabIndex = 0;
+  imageReference.setAttribute("aria-label", "Image reference. Hover or focus to view image and digest details.");
+  imageReference.setAttribute("aria-controls", details.id);
+  imageReference.setAttribute("aria-haspopup", "dialog");
+  imageReference.setAttribute("aria-expanded", "false");
+  container.append(trigger, details);
+  connectDigestDetails(trigger, details, imageReference);
+  return container;
 }
 
 function getCount(image, severity) {
@@ -148,20 +260,12 @@ function createImageRow(image) {
   imageReferenceRow.className = "image-reference-row";
 
   const imageReference = createTextElement("code", "image-reference", imageReferenceText);
-  imageReference.title = imageReferenceText;
+  imageReferenceRow.append(createDigestComparison(image, imageReference));
   imageReferenceRow.append(imageReference);
 
   const copyButton = createCopyButton(imageReferenceText, "image reference");
   imageReferenceRow.append(copyButton);
   imageCell.append(imageReferenceRow);
-
-  const imageIdentifiers = document.createElement("div");
-  imageIdentifiers.className = "image-identifiers";
-  imageIdentifiers.append(
-    createImageIdentifier("Harbor digest", image.digest, "Harbor digest"),
-    createImageIdentifier("Local digest", image.localImageId, "local digest")
-  );
-  imageCell.append(imageIdentifiers);
 
   const isScanned = image.vulnerabilities?.status === "complete";
   const scanCell = document.createElement("td");
