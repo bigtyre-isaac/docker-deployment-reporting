@@ -8,7 +8,7 @@ const summaryServices = document.querySelector("#summary-services");
 const summarySwarms = document.querySelector("#summary-swarms");
 const summaryScanned = document.querySelector("#summary-scanned");
 const summaryTotal = document.querySelector("#summary-total");
-const summaryUnknown = document.querySelector("#summary-unknown");
+const summaryScanBreakdown = document.querySelector("#summary-scan-breakdown");
 const summaryTotalVulnerabilities = document.querySelector("#summary-vulns");
 const summaryBar = document.querySelector("#summary-bar");
 const reportRowCount = document.querySelector("#report-row-count");
@@ -23,6 +23,24 @@ const severityLabels = {
   medium: "Medium",
   low: "Low",
   none: "Negligible"
+};
+const scanStatusLabels = {
+  complete: "Scanned",
+  imageNotInHarbor: "Not in Harbor",
+  harborUnavailable: "Harbor unavailable",
+  digestUnavailable: "Digest unavailable",
+  scanNotFound: "Scan not found",
+  harborNotConfigured: "Harbor not configured",
+  unknown: "Reason unavailable"
+};
+const scanStatusDescriptions = {
+  complete: "A Harbor vulnerability report is available.",
+  imageNotInHarbor: "The image repository does not match a configured Harbor repository.",
+  harborUnavailable: "Harbor could not provide vulnerability scan data.",
+  digestUnavailable: "A digest was not available for the Harbor lookup.",
+  scanNotFound: "Harbor has no vulnerability report for this image digest.",
+  harborNotConfigured: "Harbor vulnerability lookup is not configured.",
+  unknown: "The scan result did not include a reason."
 };
 
 let allImages = [];
@@ -267,14 +285,17 @@ function createImageRow(image) {
   imageReferenceRow.append(copyButton);
   imageCell.append(imageReferenceRow);
 
-  const isScanned = image.vulnerabilities?.status === "complete";
+  const scanStatus = getScanStatus(image);
+  const isScanned = scanStatus === "complete";
   const scanCell = document.createElement("td");
   scanCell.className = "col-scan-cell";
-  scanCell.append(createTextElement(
+  const statusElement = createTextElement(
     "span",
     `scan-status ${isScanned ? "is-available" : "is-unknown"}`,
-    isScanned ? "Scanned" : "Unknown"
-  ));
+    scanStatusLabels[scanStatus]
+  );
+  statusElement.title = scanStatusDescriptions[scanStatus];
+  scanCell.append(statusElement);
 
   const distributionCell = document.createElement("td");
   distributionCell.className = "col-bar-cell";
@@ -310,6 +331,15 @@ function updateSwarmOptions(images) {
   }
 }
 
+function getScanStatus(image) {
+  if (image.vulnerabilities?.status === "complete") {
+    return "complete";
+  }
+
+  const reason = image.vulnerabilities?.reason;
+  return Object.hasOwn(scanStatusLabels, reason) ? reason : "unknown";
+}
+
 function matchesFilters(image) {
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
   const searchableText = [image.swarm, image.service, image.image]
@@ -318,7 +348,7 @@ function matchesFilters(image) {
     .toLocaleLowerCase();
   const matchesSearch = searchTerm === "" || searchableText.includes(searchTerm);
   const matchesSwarm = swarmFilter.value === "" || image.swarm === swarmFilter.value;
-  const scanStatus = image.vulnerabilities?.status === "complete" ? "complete" : "unknown";
+  const scanStatus = getScanStatus(image);
   const matchesScan = scanFilter.value === "" || scanStatus === scanFilter.value;
 
   return matchesSearch && matchesSwarm && matchesScan;
@@ -396,7 +426,21 @@ function renderImages() {
 
 function updateSummary(images) {
   const scannedImages = images.filter(image => image.vulnerabilities?.status === "complete");
-  const unknownCount = images.length - scannedImages.length;
+  const scanStatusCounts = new Map();
+  for (const image of images) {
+    const scanStatus = getScanStatus(image);
+    scanStatusCounts.set(scanStatus, (scanStatusCounts.get(scanStatus) ?? 0) + 1);
+  }
+  const missingScanCount = images.length - scannedImages.length;
+  const scanBreakdown = Object.entries(scanStatusLabels)
+    .filter(([status]) => status !== "complete")
+    .map(([status, label]) => ({
+      label,
+      count: scanStatusCounts.get(status) ?? 0
+    }))
+    .filter(item => item.count > 0)
+    .map(item => `${item.count} ${item.label}`)
+    .join(", ");
   const swarmCount = new Set(images.map(image => image.swarm).filter(Boolean)).size;
   const totals = Object.fromEntries(severities.map(severity => {
     const counts = scannedImages.map(image => getCount(image, severity));
@@ -414,7 +458,9 @@ function updateSummary(images) {
   summarySwarms.textContent = String(swarmCount);
   summaryScanned.textContent = String(scannedImages.length);
   summaryTotal.textContent = String(images.length);
-  summaryUnknown.textContent = String(unknownCount);
+  summaryScanBreakdown.textContent = missingScanCount === 0
+    ? "All services have scan results"
+    : `${missingScanCount} without scan results: ${scanBreakdown}`;
   summaryTotalVulnerabilities.textContent = totalVulnerabilities === null
     ? "-"
     : String(totalVulnerabilities);

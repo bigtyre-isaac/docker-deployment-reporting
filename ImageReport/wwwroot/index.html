@@ -43,7 +43,7 @@
       <div class="summary-cell">
         <span class="summary-label">Scan coverage</span>
         <strong class="summary-value"><span id="summary-scanned">-</span> <small>of <span id="summary-total">-</span></small></strong>
-        <p id="summary-unknown-note" class="summary-note is-warning"><span id="summary-unknown">-</span> without a scan result</p>
+        <p id="summary-scan-breakdown" class="summary-note is-warning">-</p>
       </div>
       <div class="summary-cell summary-findings">
         <div class="summary-findings-head">
@@ -89,7 +89,12 @@
             <select id="filter-scan">
               <option value="">All scan status</option>
               <option value="complete">Scanned</option>
-              <option value="unknown">Unknown</option>
+              <option value="imageNotInHarbor">Not in Harbor</option>
+              <option value="harborUnavailable">Harbor unavailable</option>
+              <option value="digestUnavailable">Digest unavailable</option>
+              <option value="scanNotFound">Scan not found</option>
+              <option value="harborNotConfigured">Harbor not configured</option>
+              <option value="unknown">Reason unavailable</option>
             </select>
           </label>
           <button id="clear-filters" class="clear-filters" type="button" hidden>Clear filters</button>
@@ -115,7 +120,7 @@
         </table>
       </div>
       <footer class="report-panel-footer">
-        <span>Unknown means no scan result is available for that image yet.</span>
+        <span>Scan status shows why Harbor vulnerability counts are unavailable.</span>
         <span id="report-row-count"></span>
       </footer>
     </section>
