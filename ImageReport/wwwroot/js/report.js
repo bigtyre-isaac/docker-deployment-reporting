@@ -567,15 +567,6 @@ function updateSummary(images) {
     scanStatusCounts.set(scanStatus, (scanStatusCounts.get(scanStatus) ?? 0) + 1);
   }
   const missingScanCount = images.length - scannedImages.length;
-  const scanBreakdown = Object.entries(scanStatusLabels)
-    .filter(([status]) => status !== "complete")
-    .map(([status, label]) => ({
-      label,
-      count: scanStatusCounts.get(status) ?? 0
-    }))
-    .filter(item => item.count > 0)
-    .map(item => `${item.count} ${item.label}`)
-    .join(", ");
   const swarmCount = new Set(images.map(image => image.swarm).filter(Boolean)).size;
   const totals = Object.fromEntries(severities.map(severity => {
     const counts = scannedImages.map(image => getCount(image, severity));
@@ -595,7 +586,7 @@ function updateSummary(images) {
   summaryTotal.textContent = String(images.length);
   summaryScanBreakdown.textContent = missingScanCount === 0
     ? "All services have scan results"
-    : `${missingScanCount} without scan results: ${scanBreakdown}`;
+    : "Hover for scan breakdown";
   renderScanCoverageDetails(scanStatusCounts, scannedImages.length, images.length);
   summaryTotalVulnerabilities.textContent = totalVulnerabilities === null
     ? "-"
