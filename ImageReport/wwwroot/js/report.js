@@ -213,20 +213,22 @@ function createDigestComparison(image, imageReference) {
     )
   );
 
-  details.append(createImageIdentifier("Harbor digest", image.digest, "Harbor digest"));
+  details.append(createImageIdentifier(
+    "Deployed image digest",
+    image.digest,
+    "deployed image digest"
+  ));
 
   const localDigestLabel = digestMatches
     ? "Local repo digest (matches image ref)"
     : "Local repo digest";
   details.append(createImageIdentifier(localDigestLabel, image.localRepoDigest, "local repository digest"));
 
-  if (imageUpdate.currentDigest) {
-    details.append(createImageIdentifier(
-      "Current Harbor tag digest",
-      imageUpdate.currentDigest,
-      "current Harbor tag digest"
-    ));
-  }
+  details.append(createImageIdentifier(
+    "Harbor tag digest",
+    imageUpdate.currentDigest,
+    "Harbor tag digest"
+  ));
 
   if (image.localImageId) {
     details.append(createImageIdentifier("Local image ID", image.localImageId, "local image ID"));
