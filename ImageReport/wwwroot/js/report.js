@@ -48,6 +48,22 @@ function createCopyButton(value, label) {
   return button;
 }
 
+function createImageIdentifier(label, value, copyLabel) {
+  const identifier = document.createElement("div");
+  identifier.className = "image-identifier";
+  identifier.title = value ?? `${label} unavailable`;
+  identifier.append(
+    createTextElement("span", "image-identifier-label", label),
+    createTextElement("code", "image-identifier-value", value ?? "Unavailable")
+  );
+
+  if (value) {
+    identifier.append(createCopyButton(value, copyLabel));
+  }
+
+  return identifier;
+}
+
 function getCount(image, severity) {
   const count = image.vulnerabilities?.count?.[severity];
   return Number.isInteger(count) && count >= 0 ? count : null;
@@ -139,18 +155,13 @@ function createImageRow(image) {
   imageReferenceRow.append(copyButton);
   imageCell.append(imageReferenceRow);
 
-  const digest = image.digest;
-  const digestRow = document.createElement("div");
-  digestRow.className = "image-digest";
-  digestRow.title = digest ?? "Digest unavailable";
-  digestRow.append(
-    createTextElement("span", "image-digest-label", "Digest"),
-    createTextElement("code", "image-digest-value", digest ?? "Unavailable")
+  const imageIdentifiers = document.createElement("div");
+  imageIdentifiers.className = "image-identifiers";
+  imageIdentifiers.append(
+    createImageIdentifier("Harbor digest", image.digest, "Harbor digest"),
+    createImageIdentifier("Local digest", image.localImageId, "local digest")
   );
-  if (digest) {
-    digestRow.append(createCopyButton(digest, "digest"));
-  }
-  imageCell.append(digestRow);
+  imageCell.append(imageIdentifiers);
 
   const isScanned = image.vulnerabilities?.status === "complete";
   const scanCell = document.createElement("td");

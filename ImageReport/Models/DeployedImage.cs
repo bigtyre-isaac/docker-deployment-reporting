@@ -6,6 +6,11 @@ namespace ImageReport.Models;
 public sealed record DeployedImage(string Swarm, string Service, string Image, string Repository, string? Tag, string? Digest)
 {
     /// <summary>
+    /// Local Docker image ID when the configured image reference exists on this daemon.
+    /// </summary>
+    public string? LocalImageId { get; init; }
+
+    /// <summary>
     /// Vulnerability scan status, reason, and counts by severity.
     /// </summary>
     public VulnerabilitySummary Vulnerabilities { get; init; } = new(
