@@ -457,10 +457,74 @@ function renderErrors(errors) {
   reportErrors.replaceChildren();
 
   for (const error of errors) {
-    const message = document.createElement("p");
-    message.textContent = `${error.swarm}: ${error.message}`;
-    reportErrors.append(message);
+    const item = document.createElement("div");
+    item.className = "source-error-item";
+    item.append(
+      createTextElement("strong", "source-error-name", error.swarm),
+      createTextElement("span", "source-error-message", error.message)
+    );
+    reportErrors.append(item);
   }
+}
+
+function connectSourceErrorDetails(trigger, details) {
+  let closeTimer;
+
+  const show = () => {
+    window.clearTimeout(closeTimer);
+    if (!details.matches(":popover-open")) {
+      details.showPopover();
+    }
+    trigger.setAttribute("aria-expanded", "true");
+    positionDigestDetails(trigger, details);
+  };
+
+  const scheduleClose = () => {
+    window.clearTimeout(closeTimer);
+    closeTimer = window.setTimeout(() => {
+      const focusIsInside = trigger === document.activeElement
+        || details.contains(document.activeElement);
+      if (!trigger.matches(":hover") && !details.matches(":hover") && !focusIsInside) {
+        details.hidePopover();
+        trigger.setAttribute("aria-expanded", "false");
+      }
+    }, 140);
+  };
+
+  trigger.addEventListener("pointerenter", show);
+  trigger.addEventListener("pointerleave", scheduleClose);
+  trigger.addEventListener("focus", show);
+  trigger.addEventListener("blur", scheduleClose);
+  details.addEventListener("pointerenter", () => window.clearTimeout(closeTimer));
+  details.addEventListener("pointerleave", scheduleClose);
+  details.addEventListener("focusout", scheduleClose);
+  details.addEventListener("toggle", () => {
+    trigger.setAttribute("aria-expanded", String(details.matches(":popover-open")));
+  });
+}
+
+function renderReportStatus(message, errors = []) {
+  reportStatus.replaceChildren(document.createTextNode(message));
+
+  if (errors.length === 0) {
+    return;
+  }
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "source-error-trigger";
+  trigger.setAttribute("aria-label", "View source collection errors");
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-controls", "report-errors");
+  trigger.title = "View source collection errors";
+  trigger.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5m0-8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+  reportErrors.setAttribute("popover", "manual");
+  reportErrors.setAttribute("role", "dialog");
+  reportErrors.setAttribute("aria-label", "Source collection errors");
+  connectSourceErrorDetails(trigger, reportErrors);
+  reportStatus.append(trigger);
 }
 
 function clearFilters() {
@@ -474,8 +538,9 @@ async function loadReport() {
   refreshButton.disabled = true;
   refreshButton.classList.add("is-loading");
   reportStatus.dataset.state = "loading";
-  reportStatus.textContent = "Loading services…";
+  renderReportStatus("Loading services…");
   reportErrors.replaceChildren();
+  reportErrors.hidePopover();
 
   try {
     const response = await fetch("/api/images", {
@@ -490,7 +555,7 @@ async function loadReport() {
 
     if (response.status === 403) {
       reportStatus.dataset.state = "error";
-      reportStatus.textContent = "Your account does not have access to this report.";
+      renderReportStatus("Your account does not have access to this report.");
       return;
     }
 
@@ -507,16 +572,17 @@ async function loadReport() {
     renderImages();
     renderErrors(errors);
     reportStatus.dataset.state = errors.length > 0 ? "error" : "success";
-    reportStatus.textContent = errors.length > 0
+    renderReportStatus(errors.length > 0
       ? `${errors.length} source${errors.length === 1 ? "" : "s"} could not be collected`
-      : `${allImages.length} service${allImages.length === 1 ? "" : "s"}`;
+      : `${allImages.length} service${allImages.length === 1 ? "" : "s"}`,
+    errors);
     updatedAt.textContent = `Updated ${new Intl.DateTimeFormat(undefined, {
       hour: "numeric",
       minute: "2-digit"
     }).format(new Date())}`;
   } catch {
     reportStatus.dataset.state = "error";
-    reportStatus.textContent = "Could not load the image report. Please try again.";
+    renderReportStatus("Could not load the image report. Please try again.");
   } finally {
     refreshButton.disabled = false;
     refreshButton.classList.remove("is-loading");
@@ -553,7 +619,7 @@ imageRows.addEventListener("click", async event => {
       }, 1800);
     } catch {
       reportStatus.dataset.state = "error";
-      reportStatus.textContent = "Could not copy image reference. Check clipboard permissions and try again.";
+      renderReportStatus("Could not copy image reference. Check clipboard permissions and try again.");
     }
 
     return;
@@ -585,14 +651,14 @@ signOutButton.addEventListener("click", async () => {
 
     if (!response.ok) {
       reportStatus.dataset.state = "error";
-      reportStatus.textContent = "Could not sign out. Please try again.";
+      renderReportStatus("Could not sign out. Please try again.");
       return;
     }
 
     window.location.replace("/login.html");
   } catch {
     reportStatus.dataset.state = "error";
-    reportStatus.textContent = "Could not reach the report service. Please try again.";
+    renderReportStatus("Could not reach the report service. Please try again.");
   } finally {
     signOutButton.disabled = false;
   }
