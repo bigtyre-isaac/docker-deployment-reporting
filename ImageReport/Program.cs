@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Docker.DotNet;
 using ImageReport.Configuration;
 using ImageReport.Endpoints;
@@ -130,6 +131,31 @@ services.AddExceptionHandler<DockerExceptionHandler>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("ImageReport.Http");
+    var stopwatch = Stopwatch.StartNew();
+
+    logger.LogInformation(
+        "HTTP request started: {Method} {Path}.",
+        context.Request.Method,
+        context.Request.Path);
+
+    try
+    {
+        await next();
+    }
+    finally
+    {
+        logger.LogInformation(
+            "HTTP request completed: {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds} ms.",
+            context.Request.Method,
+            context.Request.Path,
+            context.Response.StatusCode,
+            stopwatch.ElapsedMilliseconds);
+    }
+});
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
@@ -146,6 +172,13 @@ app.MapGet("/api/images", async (
     HarborVulnerabilityService harbor,
     CancellationToken cancellationToken) =>
 {
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("ImageReport.Report");
+    logger.LogInformation(
+        "Image report requested. IncludeFederated={IncludeFederated}; IncludeVulnerabilities={IncludeVulnerabilities}.",
+        includeFederated ?? true,
+        includeVulnerabilities ?? true);
+
     var localImages = await docker.CollectAsync(cancellationToken);
     var authorization = context.Request.Headers.Authorization.ToString();
 
@@ -167,9 +200,13 @@ app.MapGet("/api/images", async (
         report = report with { Images = enrichedImages };
     }
 
+    logger.LogInformation("Returning image report with {ImageCount} images.", report.Images.Count);
     return Results.Ok(report);
 }).RequireAuthorization(policy => policy.RequireRole("ImageReport.Read"));
 
+app.Logger.LogInformation(
+    "Image report application starting in {EnvironmentName} environment.",
+    app.Environment.EnvironmentName);
 app.Run();
 
 /// <summary>

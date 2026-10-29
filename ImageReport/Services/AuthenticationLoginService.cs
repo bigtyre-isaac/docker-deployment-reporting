@@ -32,9 +32,11 @@ public sealed class AuthenticationLoginService(
 
         if (string.IsNullOrWhiteSpace(authApiBaseUrl))
         {
+            logger.LogWarning("Authentication service login cannot run because Authentication:ApiBaseUrl is not configured.");
             return AuthenticationLoginResult.Unavailable;
         }
 
+        logger.LogInformation("Sending login request to the configured authentication service.");
         var authenticationUri = new Uri(new Uri(authApiBaseUrl), "auth/login");
         var payload = JsonSerializer.SerializeToUtf8Bytes(new
         {
@@ -70,11 +72,13 @@ public sealed class AuthenticationLoginService(
         {
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
+                logger.LogInformation("Authentication service rejected the supplied credentials.");
                 return AuthenticationLoginResult.InvalidCredentials;
             }
 
             if (response.StatusCode == HttpStatusCode.Forbidden)
             {
+                logger.LogInformation("Authentication service denied login access.");
                 return AuthenticationLoginResult.Forbidden;
             }
 
@@ -109,11 +113,13 @@ public sealed class AuthenticationLoginService(
 
             if (principal.Identity?.IsAuthenticated != true)
             {
+                logger.LogWarning("Authentication service returned a token without an authenticated identity.");
                 return AuthenticationLoginResult.Unavailable;
             }
 
             if (!principal.IsInRole("ImageReport.Read"))
             {
+                logger.LogWarning("Authentication service returned a token without the ImageReport.Read role.");
                 return AuthenticationLoginResult.Forbidden;
             }
 
@@ -136,6 +142,7 @@ public sealed class AuthenticationLoginService(
                 return AuthenticationLoginResult.Unavailable;
             }
 
+            logger.LogInformation("Authentication service token validated successfully.");
             return AuthenticationLoginResult.Success(token, effectiveExpiry);
         }
         catch (SecurityTokenException)

@@ -10,13 +10,17 @@ namespace ImageReport.Services;
 /// <summary>
 /// Reads deployment references from local Swarm service specifications and local image metadata.
 /// </summary>
-public sealed class DockerImageService(IDockerClient docker, IOptions<SwarmOptions> options)
+public sealed class DockerImageService(
+    IDockerClient docker,
+    IOptions<SwarmOptions> options,
+    ILogger<DockerImageService> logger)
 {
     /// <summary>
     /// Collects configured images and adds matching local image metadata when available.
     /// </summary>
     public async Task<List<DeployedImage>> CollectAsync(CancellationToken cancellationToken)
     {
+        logger.LogInformation("Collecting services from local Swarm {Swarm}.", options.Value.Name);
         var services = await docker.Swarm.ListServicesAsync(new ServicesListParameters(), cancellationToken);
         var images = services.Select(service => DockerImageReferenceParser.Parse(
             options.Value.Name,
@@ -25,9 +29,13 @@ public sealed class DockerImageService(IDockerClient docker, IOptions<SwarmOptio
 
         if (images.Count == 0)
         {
+            logger.LogInformation("Local Swarm {Swarm} has no deployed services.", options.Value.Name);
             return images;
         }
 
+        logger.LogInformation("Found {ServiceCount} services in local Swarm {Swarm}; matching local image metadata.",
+            images.Count,
+            options.Value.Name);
         var localImages = await docker.Images.ListImagesAsync(
             new ImagesListParameters { All = true },
             cancellationToken);
@@ -41,7 +49,7 @@ public sealed class DockerImageService(IDockerClient docker, IOptions<SwarmOptio
             }
         }
 
-        return images.Select(image =>
+        var deployedImages = images.Select(image =>
         {
             var localImage = FindLocalImage(image, localImages, localImagesByTag);
             if (localImage is null)
@@ -55,6 +63,13 @@ public sealed class DockerImageService(IDockerClient docker, IOptions<SwarmOptio
                 LocalRepoDigest = GetLocalRepoDigest(localImage, image.Repository, image.Digest)
             };
         }).ToList();
+
+        logger.LogInformation(
+            "Local Swarm collection completed: {ServiceCount} services, {MatchedImageCount} local image matches.",
+            deployedImages.Count,
+            deployedImages.Count(image => image.LocalImageId is not null));
+
+        return deployedImages;
     }
 
     /// <summary>

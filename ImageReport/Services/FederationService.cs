@@ -27,6 +27,7 @@ public sealed class FederationService(
 
         if (includeFederated)
         {
+            logger.LogInformation("Collecting images from {PeerCount} configured federated Swarms.", options.Value.Peers.Count);
             var results = await Task.WhenAll(options.Value.Peers.Select(peer =>
                 CollectPeerAsync(peer, authorization, cancellationToken)));
 
@@ -35,6 +36,10 @@ public sealed class FederationService(
                 report.Images.AddRange(result.Images);
                 report.Errors.AddRange(result.Errors);
             }
+        }
+        else
+        {
+            logger.LogInformation("Federated image collection is disabled for this request.");
         }
 
         report.Images.Sort((left, right) =>
@@ -45,6 +50,11 @@ public sealed class FederationService(
                 ? swarmOrder
                 : StringComparer.Ordinal.Compare(left.Service, right.Service);
         });
+
+        logger.LogInformation(
+            "Image aggregation completed with {ImageCount} images and {ErrorCount} collection errors.",
+            report.Images.Count,
+            report.Errors.Count);
 
         return report;
     }
@@ -59,6 +69,7 @@ public sealed class FederationService(
     {
         try
         {
+            logger.LogInformation("Requesting image inventory from federated Swarm {Peer}.", peer.Name);
             using var client = clients.CreateClient("Federation");
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 new Uri(new Uri(peer.BaseUrl), "/api/images?includeFederated=false&includeVulnerabilities=false"));
@@ -97,6 +108,11 @@ public sealed class FederationService(
                 .Select(error => new CollectionError(peer.Name, error.Message))
                 .ToList();
 
+            logger.LogInformation(
+                "Federated Swarm {Peer} returned {ImageCount} images and {ErrorCount} collection errors.",
+                peer.Name,
+                report.Images.Count,
+                errors.Count);
             return new ImageReportResponse(report.Images, errors);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
