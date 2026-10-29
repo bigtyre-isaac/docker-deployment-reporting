@@ -16,6 +16,12 @@ public sealed record DeployedImage(string Swarm, string Service, string Image, s
     public string? LocalRepoDigest { get; init; }
 
     /// <summary>
+    /// Whether the image registry authority matches the configured Harbor registry.
+    /// Null when Harbor registry matching could not be checked.
+    /// </summary>
+    public bool? HarborRegistryMatched { get; init; }
+
+    /// <summary>
     /// Vulnerability scan status, reason, and counts by severity.
     /// </summary>
     public VulnerabilitySummary Vulnerabilities { get; init; } = new(

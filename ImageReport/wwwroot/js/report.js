@@ -161,40 +161,60 @@ function connectDigestDetails(trigger, details, imageReference) {
 }
 
 function createDigestComparison(image, imageReference) {
-  const matches = Boolean(
+  const registryMatched = image.harborRegistryMatched;
+  const status = registryMatched === true
+    ? "match"
+    : registryMatched === false
+      ? "mismatch"
+      : "unchecked";
+  const registryLabel = registryMatched === true
+    ? "Registry matches configured Harbor"
+    : registryMatched === false
+      ? "Registry does not match configured Harbor"
+      : "Harbor registry not checked";
+  const digestMatches = Boolean(
     image.digest
     && image.localRepoDigest
     && image.digest === image.localRepoDigest
   );
-  const status = matches ? "match" : "mismatch";
-  const label = matches ? "Harbor and local digests match" : "Harbor and local digests do not match";
+  const digestLabel = image.digest && image.localRepoDigest
+    ? digestMatches
+      ? "Image and local digests match"
+      : "Image and local digests differ"
+    : "Image and local digests could not be compared";
+  const digestStatus = image.digest && image.localRepoDigest
+    ? digestMatches ? "match" : "mismatch"
+    : "unchecked";
   const container = document.createElement("div");
   container.className = "digest-comparison";
 
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = `digest-comparison-status is-${status}`;
-  trigger.setAttribute("aria-label", `${label}. Hover or focus to view digest details.`);
+  trigger.setAttribute("aria-label", `${registryLabel}. Hover or focus to view image details.`);
   trigger.setAttribute("aria-haspopup", "dialog");
   trigger.setAttribute("aria-expanded", "false");
-  trigger.innerHTML = matches
+  trigger.innerHTML = registryMatched === true
     ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m6 10 2.5 2.5L14 7" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m7 7 6 6m0-6-6 6" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>';
+    : registryMatched === false
+      ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m7 7 6 6m0-6-6 6" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>'
+      : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M10 9v5m0-8h.01" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>';
 
   const details = document.createElement("div");
   details.id = `digest-details-${nextDigestDetailsId++}`;
   details.className = "digest-details";
   details.setAttribute("popover", "manual");
   details.setAttribute("role", "dialog");
-  details.setAttribute("aria-label", "Image digest details");
+  details.setAttribute("aria-label", "Image and Harbor registry details");
   details.append(
-    createTextElement("strong", `digest-details-status is-${status}`, label),
+    createTextElement("strong", `digest-details-status is-${status}`, registryLabel),
+    createTextElement("span", `digest-details-status is-${digestStatus}`, digestLabel),
     createImageIdentifier(
       "Image reference",
       image.image ?? image.repository ?? "Image reference unavailable",
       "image reference"
     ),
-    createImageIdentifier("Harbor digest", image.digest, "Harbor digest"),
+    createImageIdentifier("Image ref digest", image.digest, "image reference digest"),
     createImageIdentifier("Local repo digest", image.localRepoDigest, "local repository digest"),
     createImageIdentifier("Local image ID", image.localImageId, "local image ID")
   );

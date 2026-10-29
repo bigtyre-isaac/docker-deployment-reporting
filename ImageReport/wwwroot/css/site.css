@@ -1625,6 +1625,10 @@ input:focus {
   color: #df8b16;
 }
 
+.digest-comparison-status.is-unchecked {
+  color: #758297;
+}
+
 .digest-comparison-status:focus-visible {
   outline: 2px solid #6b91ce;
   outline-offset: 2px;
@@ -1691,6 +1695,10 @@ input:focus {
 
 .digest-details-status.is-mismatch {
   color: #a45b0a;
+}
+
+.digest-details-status.is-unchecked {
+  color: #758297;
 }
 
 .digest-details .image-identifier {
