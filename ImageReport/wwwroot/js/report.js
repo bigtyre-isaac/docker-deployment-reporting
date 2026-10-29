@@ -9,6 +9,9 @@ const summarySwarms = document.querySelector("#summary-swarms");
 const summaryScanned = document.querySelector("#summary-scanned");
 const summaryTotal = document.querySelector("#summary-total");
 const summaryScanBreakdown = document.querySelector("#summary-scan-breakdown");
+const summaryScanCoverageTrigger = document.querySelector("#summary-scan-coverage-trigger");
+const summaryScanCoverageDetails = document.querySelector("#summary-scan-coverage-details");
+const summaryScanCoverageItems = document.querySelector("#summary-scan-coverage-items");
 const summaryTotalVulnerabilities = document.querySelector("#summary-vulns");
 const summaryBar = document.querySelector("#summary-bar");
 const reportRowCount = document.querySelector("#report-row-count");
@@ -69,6 +72,44 @@ function createTextElement(tagName, className, text) {
   element.className = className;
   element.textContent = text;
   return element;
+}
+
+function renderScanCoverageDetails(scanStatusCounts, scannedCount, totalCount) {
+  summaryScanCoverageItems.replaceChildren();
+
+  if (totalCount === 0) {
+    summaryScanCoverageItems.append(
+      createTextElement("p", "scan-coverage-empty", "There are no services to report.")
+    );
+    return;
+  }
+
+  const statuses = [
+    ["complete", "Scanned services have Harbor vulnerability results."],
+    ...Object.entries(scanStatusDescriptions)
+      .filter(([status]) => status !== "complete")
+  ];
+
+  for (const [status, description] of statuses) {
+    const count = scanStatusCounts.get(status) ?? 0;
+    if (count === 0) {
+      continue;
+    }
+
+    const row = document.createElement("div");
+    row.className = "scan-coverage-detail";
+    row.append(
+      createTextElement("strong", "scan-coverage-detail-label", scanStatusLabels[status]),
+      createTextElement("span", "scan-coverage-detail-description", description),
+      createTextElement("b", "scan-coverage-detail-count", String(count))
+    );
+    summaryScanCoverageItems.append(row);
+  }
+
+  summaryScanCoverageTrigger.setAttribute(
+    "aria-label",
+    `Scan coverage: ${scannedCount} of ${totalCount} services scanned. Hover or focus for details.`
+  );
 }
 
 function createCopyButton(value, label) {
@@ -555,6 +596,7 @@ function updateSummary(images) {
   summaryScanBreakdown.textContent = missingScanCount === 0
     ? "All services have scan results"
     : `${missingScanCount} without scan results: ${scanBreakdown}`;
+  renderScanCoverageDetails(scanStatusCounts, scannedImages.length, images.length);
   summaryTotalVulnerabilities.textContent = totalVulnerabilities === null
     ? "-"
     : String(totalVulnerabilities);
@@ -607,7 +649,7 @@ function renderErrors(errors) {
   }
 }
 
-function connectSourceErrorDetails(trigger, details) {
+function connectPopoverDetails(trigger, details) {
   let closeTimer;
 
   const show = () => {
@@ -663,7 +705,7 @@ function renderReportStatus(message, errors = []) {
   reportErrors.setAttribute("popover", "manual");
   reportErrors.setAttribute("role", "dialog");
   reportErrors.setAttribute("aria-label", "Source collection errors");
-  connectSourceErrorDetails(trigger, reportErrors);
+  connectPopoverDetails(trigger, reportErrors);
   reportStatus.append(trigger);
 }
 
@@ -734,6 +776,7 @@ swarmFilter.addEventListener("change", renderImages);
 scanFilter.addEventListener("change", renderImages);
 clearFiltersButton.addEventListener("click", clearFilters);
 refreshButton.addEventListener("click", loadReport);
+connectPopoverDetails(summaryScanCoverageTrigger, summaryScanCoverageDetails);
 
 imageRows.addEventListener("click", async event => {
   const copyButton = event.target.closest(".copy-image-button");

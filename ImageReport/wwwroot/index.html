@@ -40,7 +40,14 @@
         <strong id="summary-services" class="summary-value">-</strong>
         <p class="summary-note"><span id="summary-swarms">-</span> Swarms</p>
       </div>
-      <div class="summary-cell">
+      <div
+        id="summary-scan-coverage-trigger"
+        class="summary-cell"
+        tabindex="0"
+        aria-label="View scan coverage details"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="summary-scan-coverage-details">
         <span class="summary-label">Scan coverage</span>
         <strong class="summary-value"><span id="summary-scanned">-</span> <small>of <span id="summary-total">-</span></small></strong>
         <p id="summary-scan-breakdown" class="summary-note is-warning">-</p>
@@ -60,6 +67,16 @@
         </dl>
       </div>
     </section>
+
+    <div
+      id="summary-scan-coverage-details"
+      class="digest-details scan-coverage-details"
+      popover="manual"
+      role="dialog"
+      aria-label="Scan coverage details">
+      <strong class="digest-details-status">Scan coverage details</strong>
+      <div id="summary-scan-coverage-items"></div>
+    </div>
 
     <div id="report-errors" class="report-errors" popover="manual" role="dialog" aria-label="Source collection errors"></div>
 

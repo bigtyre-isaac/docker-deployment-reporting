@@ -1106,6 +1106,15 @@ input:focus {
   padding: 15px 20px 12px;
 }
 
+.summary-cell[aria-haspopup="dialog"] {
+  cursor: help;
+}
+
+.summary-cell[aria-haspopup="dialog"]:focus-visible {
+  outline: 2px solid #3567b5;
+  outline-offset: -3px;
+}
+
 .summary-cell + .summary-cell {
   border-left: 1px solid #dfe4ea;
 }
@@ -1694,6 +1703,43 @@ input:focus {
   color: #303b4b;
   background: #fff;
   box-shadow: 0 10px 28px rgb(22 39 61 / 18%);
+}
+
+.scan-coverage-details[popover] {
+  width: min(440px, calc(100vw - 24px));
+}
+
+.scan-coverage-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 14px;
+  padding: 8px 0;
+  border-top: 1px solid #eef1f5;
+  font-size: 11px;
+}
+
+.scan-coverage-detail-label {
+  color: #303b4b;
+  font-weight: 650;
+}
+
+.scan-coverage-detail-description {
+  grid-column: 1;
+  color: #6f7e93;
+  line-height: 1.4;
+}
+
+.scan-coverage-detail-count {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: #303b4b;
+  font-size: 12px;
+}
+
+.scan-coverage-empty {
+  margin: 0;
+  color: #6f7e93;
+  font-size: 11px;
 }
 
 .digest-details::backdrop {
