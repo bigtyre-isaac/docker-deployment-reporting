@@ -37,7 +37,7 @@ const scanStatusLabels = {
   harborResponseReadFailed: "Harbor response unreadable",
   invalidScanReport: "Invalid scan report",
   digestUnavailable: "Digest unavailable",
-  scanNotFound: "Scan not found",
+  scanNotFound: "Harbor returned 404 for scan",
   harborNotConfigured: "Harbor not configured",
   unknown: "Reason unavailable"
 };
@@ -54,7 +54,7 @@ const scanStatusDescriptions = {
   harborResponseReadFailed: "The report service could not read Harbor's response.",
   invalidScanReport: "Harbor returned a response that was not a valid vulnerability report.",
   digestUnavailable: "A digest was not available for the Harbor lookup.",
-  scanNotFound: "Harbor has no vulnerability report for this image digest.",
+  scanNotFound: "Harbor returned HTTP 404 for the vulnerability report lookup. This does not prove the artifact or scan is absent; access may be restricted.",
   harborNotConfigured: "Harbor vulnerability lookup is not configured.",
   unknown: "The scan result did not include a reason."
 };
@@ -162,16 +162,23 @@ function connectDigestDetails(trigger, details, imageReference) {
 
 function createDigestComparison(image, imageReference) {
   const registryMatched = image.harborRegistryMatched;
-  const status = registryMatched === true
-    ? "match"
-    : registryMatched === false
-      ? "mismatch"
-      : "unchecked";
   const registryLabel = registryMatched === true
-    ? "Registry matches configured Harbor"
+    ? "Harbor registry matched"
     : registryMatched === false
-      ? "Registry does not match configured Harbor"
+      ? "Harbor registry not matched"
       : "Harbor registry not checked";
+  const imageUpdate = image.imageUpdate ?? {};
+  const updateStatus = ["upToDate", "updateAvailable"].includes(imageUpdate.status)
+    ? imageUpdate.status
+    : "unknown";
+  const updateLabel = updateStatus === "upToDate"
+    ? "Up to date for configured tag"
+    : updateStatus === "updateAvailable"
+      ? "Update available for configured tag"
+      : getUpdateUnknownLabel(imageUpdate.reason);
+  const updateDescription = imageUpdate.detail
+    ? `${updateLabel}. ${imageUpdate.detail}`
+    : updateLabel;
   const digestMatches = Boolean(
     image.digest
     && image.localRepoDigest
@@ -190,24 +197,33 @@ function createDigestComparison(image, imageReference) {
 
   const trigger = document.createElement("button");
   trigger.type = "button";
-  trigger.className = `digest-comparison-status is-${status}`;
-  trigger.setAttribute("aria-label", `${registryLabel}. Hover or focus to view image details.`);
+  trigger.className = `image-update-status is-${updateStatus}`;
+  trigger.setAttribute("aria-label", `${updateDescription}. Hover or focus to view image details.`);
   trigger.setAttribute("aria-haspopup", "dialog");
   trigger.setAttribute("aria-expanded", "false");
-  trigger.innerHTML = registryMatched === true
-    ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m6 10 2.5 2.5L14 7" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    : registryMatched === false
-      ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="m7 7 6 6m0-6-6 6" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>'
-      : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M10 9v5m0-8h.01" stroke="white" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  trigger.title = updateDescription;
+  trigger.innerHTML = updateStatus === "upToDate"
+    ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : updateStatus === "updateAvailable"
+      ? '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 15V4m0 0L5.5 8.5M10 4l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+      : '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5m0-8h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 
+  const registryIndicator = image.localImageId && registryMatched === false
+    ? createRegistryMismatchIndicator()
+    : null;
   const details = document.createElement("div");
   details.id = `digest-details-${nextDigestDetailsId++}`;
   details.className = "digest-details";
   details.setAttribute("popover", "manual");
   details.setAttribute("role", "dialog");
-  details.setAttribute("aria-label", "Image and Harbor registry details");
+  details.setAttribute("aria-label", "Image update and digest details");
   details.append(
-    createTextElement("strong", `digest-details-status is-${status}`, registryLabel),
+    createTextElement("strong", `digest-details-status is-${updateStatus}`, updateDescription),
+    createTextElement(
+      "span",
+      `digest-details-status is-${registryMatched === true ? "match" : registryMatched === false ? "mismatch" : "unchecked"}`,
+      registryLabel
+    ),
     createTextElement("span", `digest-details-status is-${digestStatus}`, digestLabel),
     createImageIdentifier(
       "Image reference",
@@ -216,6 +232,7 @@ function createDigestComparison(image, imageReference) {
     ),
     createImageIdentifier("Image ref digest", image.digest, "image reference digest"),
     createImageIdentifier("Local repo digest", image.localRepoDigest, "local repository digest"),
+    createImageIdentifier("Current Harbor tag digest", imageUpdate.currentDigest, "current Harbor tag digest"),
     createImageIdentifier("Local image ID", image.localImageId, "local image ID")
   );
 
@@ -225,9 +242,46 @@ function createDigestComparison(image, imageReference) {
   imageReference.setAttribute("aria-controls", details.id);
   imageReference.setAttribute("aria-haspopup", "dialog");
   imageReference.setAttribute("aria-expanded", "false");
+  if (registryIndicator) {
+    container.append(registryIndicator);
+  }
   container.append(trigger, details);
   connectDigestDetails(trigger, details, imageReference);
   return container;
+}
+
+function createRegistryMismatchIndicator() {
+  const indicator = document.createElement("span");
+  indicator.className = "harbor-registry-mismatch";
+  indicator.setAttribute("role", "img");
+  indicator.setAttribute(
+    "aria-label",
+    "Local image is not from the configured Harbor registry."
+  );
+  indicator.title = "Local image is not from the configured Harbor registry.";
+  indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 21h10M9 21l1.5-11h3L15 21M10.5 10 8 6h8l-2.5 4M8 6 5 4m11 2 3-2M12 3V1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="m5 5 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  return indicator;
+}
+
+function getUpdateUnknownLabel(reason) {
+  const labels = {
+    tagUnavailable: "Update status unknown: image has no explicit tag",
+    tagLookupNotFound: "Update status unknown: Harbor returned 404 for tag lookup",
+    tagNotFound: "Update status unknown: Harbor returned 404 for tag lookup",
+    tagLookupUnavailable: "Update status unknown: Harbor tag lookup was unavailable",
+    digestUnavailable: "Update status unknown: deployed digest unavailable",
+    harborNotConfigured: "Update status unknown: Harbor not configured",
+    harborAuthenticationFailed: "Update status unknown: Harbor authentication failed",
+    harborAccessDenied: "Update status unknown: Harbor access denied",
+    harborServerError: "Update status unknown: Harbor server error",
+    harborRequestRejected: "Update status unknown: Harbor rejected the request",
+    harborTimeout: "Update status unknown: Harbor timed out",
+    harborConnectionFailed: "Update status unknown: Harbor connection failed",
+    harborResponseReadFailed: "Update status unknown: Harbor response unreadable",
+    invalidArtifactResponse: "Update status unknown: invalid Harbor artifact response",
+    imageNotInHarbor: "Update status unknown: registry not matched"
+  };
+  return labels[reason] ?? "Update status unknown";
 }
 
 function getCount(image, severity) {

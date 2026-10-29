@@ -22,6 +22,14 @@ public sealed record DeployedImage(string Swarm, string Service, string Image, s
     public bool? HarborRegistryMatched { get; init; }
 
     /// <summary>
+    /// Whether the deployed tag points to a different digest in Harbor.
+    /// </summary>
+    public ImageUpdateSummary ImageUpdate { get; init; } = new(
+        "unknown",
+        "notChecked",
+        null);
+
+    /// <summary>
     /// Vulnerability scan status, reason, and counts by severity.
     /// </summary>
     public VulnerabilitySummary Vulnerabilities { get; init; } = new(

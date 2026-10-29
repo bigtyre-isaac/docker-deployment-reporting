@@ -72,7 +72,8 @@ public sealed class FederationService(
             logger.LogInformation("Requesting image inventory from federated Swarm {Peer}.", peer.Name);
             using var client = clients.CreateClient("Federation");
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                new Uri(new Uri(peer.BaseUrl), "/api/images?includeFederated=false&includeVulnerabilities=false"));
+                new Uri(new Uri(peer.BaseUrl),
+                    "/api/images?includeFederated=false&includeVulnerabilities=false&includeImageUpdates=false"));
 
             request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorization);
 

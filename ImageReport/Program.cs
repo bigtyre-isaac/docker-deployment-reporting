@@ -166,6 +166,7 @@ app.MapAuthenticationRoutes();
 app.MapGet("/api/images", async (
     bool? includeFederated,
     bool? includeVulnerabilities,
+    bool? includeImageUpdates,
     HttpContext context,
     DockerImageService docker,
     FederationService federation,
@@ -175,9 +176,10 @@ app.MapGet("/api/images", async (
     var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
         .CreateLogger("ImageReport.Report");
     logger.LogInformation(
-        "Image report requested. IncludeFederated={IncludeFederated}; IncludeVulnerabilities={IncludeVulnerabilities}.",
+        "Image report requested. IncludeFederated={IncludeFederated}; IncludeVulnerabilities={IncludeVulnerabilities}; IncludeImageUpdates={IncludeImageUpdates}.",
         includeFederated ?? true,
-        includeVulnerabilities ?? true);
+        includeVulnerabilities ?? true,
+        includeImageUpdates ?? true);
 
     var localImages = await docker.CollectAsync(cancellationToken);
     var authorization = context.Request.Headers.Authorization.ToString();
@@ -194,9 +196,13 @@ app.MapGet("/api/images", async (
         authorization,
         cancellationToken);
 
-    if (includeVulnerabilities ?? true)
+    if ((includeVulnerabilities ?? true) || (includeImageUpdates ?? true))
     {
-        var enrichedImages = await harbor.EnrichAsync(report.Images, cancellationToken);
+        var enrichedImages = await harbor.EnrichAsync(
+            report.Images,
+            cancellationToken,
+            includeVulnerabilities ?? true,
+            includeImageUpdates ?? true);
         report = report with { Images = enrichedImages };
     }
 

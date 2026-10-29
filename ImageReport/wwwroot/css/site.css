@@ -1596,40 +1596,58 @@ input:focus {
 
 .digest-comparison {
   display: flex;
+  align-items: center;
+  gap: 4px;
   flex: 0 0 auto;
   margin: 0;
 }
 
-.digest-comparison-status {
-  width: 23px;
-  height: 23px;
+.harbor-registry-mismatch {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  padding: 2px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
+  color: #df8b16;
   cursor: help;
 }
 
-.digest-comparison-status svg {
+.harbor-registry-mismatch svg {
+  width: 19px;
+  height: 19px;
+}
+
+.image-update-status {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.image-update-status svg {
   width: 20px;
   height: 20px;
 }
 
-.digest-comparison-status.is-match {
+.image-update-status.is-upToDate {
   color: #168263;
 }
 
-.digest-comparison-status.is-mismatch {
+.image-update-status.is-updateAvailable {
   color: #df8b16;
 }
 
-.digest-comparison-status.is-unchecked {
+.image-update-status.is-unknown {
   color: #758297;
 }
 
-.digest-comparison-status:focus-visible {
+.image-update-status:focus-visible {
   outline: 2px solid #6b91ce;
   outline-offset: 2px;
 }
