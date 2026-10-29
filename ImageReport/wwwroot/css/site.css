@@ -1730,8 +1730,11 @@ input:focus {
 
 .digest-details .image-identifier-label {
   width: 138px;
+  flex: 0 0 138px;
   color: #6f7e93;
   font-size: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .digest-details .image-identifier-value {

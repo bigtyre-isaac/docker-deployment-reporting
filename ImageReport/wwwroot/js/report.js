@@ -213,6 +213,8 @@ function createDigestComparison(image, imageReference) {
     )
   );
 
+  details.append(createImageIdentifier("Harbor digest", image.digest, "Harbor digest"));
+
   if (image.localRepoDigest) {
     const localDigestLabel = digestMatches
       ? "Local repo digest (matches image ref)"
