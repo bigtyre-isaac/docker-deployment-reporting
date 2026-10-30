@@ -18,7 +18,9 @@ const reportRowCount = document.querySelector("#report-row-count");
 const searchInput = document.querySelector("#filter-search");
 const swarmFilter = document.querySelector("#filter-swarm");
 const scanFilter = document.querySelector("#filter-scan");
-const severitySortSelect = document.querySelector("#sort-severity");
+const sortMenuTrigger = document.querySelector("#sort-menu-trigger");
+const sortMenu = document.querySelector("#sort-menu");
+const sortMenuOptions = [...document.querySelectorAll(".sort-menu-option")];
 const clearFiltersButton = document.querySelector("#clear-filters");
 const pageSizeSelect = document.querySelector("#page-size");
 const previousPageButton = document.querySelector("#previous-page");
@@ -591,6 +593,28 @@ function renderPagination(pageCount) {
   }
 }
 
+function positionSortMenu() {
+  const triggerBounds = sortMenuTrigger.getBoundingClientRect();
+  const menuBounds = sortMenu.getBoundingClientRect();
+  const left = Math.max(
+    8,
+    Math.min(triggerBounds.right - menuBounds.width, window.innerWidth - menuBounds.width - 8)
+  );
+  const belowTop = triggerBounds.bottom + 5;
+  const top = belowTop + menuBounds.height <= window.innerHeight - 8
+    ? belowTop
+    : Math.max(8, triggerBounds.top - menuBounds.height - 5);
+
+  sortMenu.style.left = `${left}px`;
+  sortMenu.style.top = `${top}px`;
+}
+
+function updateSortMenu() {
+  for (const option of sortMenuOptions) {
+    option.setAttribute("aria-checked", String(option.dataset.sortField === sortField));
+  }
+}
+
 function updateSummary(images) {
   const scannedImages = images.filter(image => image.vulnerabilities?.status === "complete");
   const scanStatusCounts = new Map();
@@ -821,11 +845,38 @@ scanFilter.addEventListener("change", () => {
   currentPage = 1;
   renderImages();
 });
-severitySortSelect.addEventListener("change", () => {
-  sortField = severitySortSelect.value;
+sortMenu.addEventListener("toggle", () => {
+  const isOpen = sortMenu.matches(":popover-open");
+  sortMenuTrigger.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) {
+    positionSortMenu();
+  }
+});
+sortMenu.addEventListener("click", event => {
+  const option = event.target instanceof Element
+    ? event.target.closest(".sort-menu-option")
+    : null;
+  if (!option || !sortMenu.contains(option)) {
+    return;
+  }
+
+  sortField = option.dataset.sortField;
+  updateSortMenu();
+  sortMenu.hidePopover();
+  sortMenuTrigger.focus();
   currentPage = 1;
   renderImages();
 });
+window.addEventListener("resize", () => {
+  if (sortMenu.matches(":popover-open")) {
+    positionSortMenu();
+  }
+});
+window.addEventListener("scroll", () => {
+  if (sortMenu.matches(":popover-open")) {
+    positionSortMenu();
+  }
+}, true);
 clearFiltersButton.addEventListener("click", clearFilters);
 refreshButton.addEventListener("click", loadReport);
 connectPopoverDetails(summaryScanCoverageTrigger, summaryScanCoverageDetails);

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using ImageReport.Configuration;
@@ -23,24 +24,59 @@ public sealed class FederationService(
         string authorization,
         CancellationToken cancellationToken)
     {
-        var report = new ImageReportResponse([.. localImages], []);
+        var federatedReport = await CollectPeersAsync(
+            includeFederated,
+            authorization,
+            cancellationToken);
 
-        if (includeFederated)
-        {
-            logger.LogInformation("Collecting images from {PeerCount} configured federated Swarms.", options.Value.Peers.Count);
-            var results = await Task.WhenAll(options.Value.Peers.Select(peer =>
-                CollectPeerAsync(peer, authorization, cancellationToken)));
+        return Aggregate(localImages, federatedReport);
+    }
 
-            foreach (var result in results)
-            {
-                report.Images.AddRange(result.Images);
-                report.Errors.AddRange(result.Errors);
-            }
-        }
-        else
+    /// <summary>
+    /// Collects peer inventories without requiring the local Docker inventory.
+    /// </summary>
+    public async Task<ImageReportResponse> CollectPeersAsync(
+        bool includeFederated,
+        string authorization,
+        CancellationToken cancellationToken)
+    {
+        var report = new ImageReportResponse([], []);
+
+        if (!includeFederated)
         {
             logger.LogInformation("Federated image collection is disabled for this request.");
+            return report;
         }
+
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("Collecting images from {PeerCount} configured federated Swarms.", options.Value.Peers.Count);
+        var results = await Task.WhenAll(options.Value.Peers.Select(peer =>
+            CollectPeerAsync(peer, authorization, cancellationToken)));
+
+        foreach (var result in results)
+        {
+            report.Images.AddRange(result.Images);
+            report.Errors.AddRange(result.Errors);
+        }
+
+        logger.LogInformation(
+            "Federation collection completed in {ElapsedMilliseconds} ms with {ImageCount} images and {ErrorCount} errors.",
+            stopwatch.ElapsedMilliseconds,
+            report.Images.Count,
+            report.Errors.Count);
+        return report;
+    }
+
+    /// <summary>
+    /// Combines local and peer inventories and sorts them deterministically.
+    /// </summary>
+    public ImageReportResponse Aggregate(
+        IReadOnlyCollection<DeployedImage> localImages,
+        ImageReportResponse federatedReport)
+    {
+        var report = new ImageReportResponse(
+            [.. localImages, .. federatedReport.Images],
+            [.. federatedReport.Errors]);
 
         report.Images.Sort((left, right) =>
         {

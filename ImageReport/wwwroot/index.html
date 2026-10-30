@@ -148,16 +148,42 @@
               <th scope="col">
                 <div class="vulnerability-header">
                   <span>Vulnerability distribution</span>
-                  <label class="table-sort-control">
+                  <button
+                    id="sort-menu-trigger"
+                    class="table-sort-trigger"
+                    type="button"
+                    popovertarget="sort-menu"
+                    aria-controls="sort-menu"
+                    aria-haspopup="menu"
+                    aria-expanded="false">
                     <span>Sort by</span>
-                    <select id="sort-severity" aria-label="Sort by vulnerability severity, highest count first">
-                      <option value="critical">Critical</option>
-                      <option value="high" selected>High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                      <option value="none">Negligible</option>
-                    </select>
-                  </label>
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="m4 6 4 4 4-4" />
+                    </svg>
+                  </button>
+                  <div id="sort-menu" class="sort-menu" popover="auto" role="menu" aria-label="Sort by vulnerability severity">
+                    <strong class="sort-menu-heading">Sort by vulnerability severity</strong>
+                    <button class="sort-menu-option" type="button" role="menuitemradio" aria-checked="false" data-sort-field="critical">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
+                      <span>Critical</span>
+                    </button>
+                    <button class="sort-menu-option" type="button" role="menuitemradio" aria-checked="true" data-sort-field="high">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
+                      <span>High</span>
+                    </button>
+                    <button class="sort-menu-option" type="button" role="menuitemradio" aria-checked="false" data-sort-field="medium">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
+                      <span>Medium</span>
+                    </button>
+                    <button class="sort-menu-option" type="button" role="menuitemradio" aria-checked="false" data-sort-field="low">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
+                      <span>Low</span>
+                    </button>
+                    <button class="sort-menu-option" type="button" role="menuitemradio" aria-checked="false" data-sort-field="none">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
+                      <span>Negligible</span>
+                    </button>
+                  </div>
                 </div>
               </th>
             </tr>
