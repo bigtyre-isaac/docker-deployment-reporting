@@ -19,6 +19,10 @@ const searchInput = document.querySelector("#filter-search");
 const swarmFilter = document.querySelector("#filter-swarm");
 const scanFilter = document.querySelector("#filter-scan");
 const clearFiltersButton = document.querySelector("#clear-filters");
+const pageSizeSelect = document.querySelector("#page-size");
+const previousPageButton = document.querySelector("#previous-page");
+const nextPageButton = document.querySelector("#next-page");
+const pageButtons = document.querySelector("#page-buttons");
 const severities = ["critical", "high", "medium", "low", "none"];
 const severityLabels = {
   critical: "Critical",
@@ -66,6 +70,8 @@ let allImages = [];
 let sortField = "critical";
 let sortDirection = -1;
 let nextDigestDetailsId = 0;
+let currentPage = 1;
+let pageSize = 50;
 
 function createTextElement(tagName, className, text) {
   const element = document.createElement(tagName);
@@ -527,6 +533,10 @@ function updateSortHeaders() {
 
 function renderImages() {
   const filteredImages = allImages.filter(matchesFilters).sort(compareImages);
+  const pageCount = Math.ceil(filteredImages.length / pageSize);
+  currentPage = Math.min(currentPage, Math.max(pageCount, 1));
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageImages = filteredImages.slice(pageStart, pageStart + pageSize);
   imageRows.replaceChildren();
 
   if (filteredImages.length === 0) {
@@ -549,14 +559,54 @@ function renderImages() {
     row.append(cell);
     imageRows.append(row);
   } else {
-    for (const image of filteredImages) {
+    for (const image of pageImages) {
       imageRows.append(createImageRow(image));
     }
   }
 
-  reportRowCount.textContent = `Showing ${filteredImages.length} of ${allImages.length} services`;
+  const firstVisible = filteredImages.length === 0 ? 0 : pageStart + 1;
+  const lastVisible = Math.min(pageStart + pageSize, filteredImages.length);
+  reportRowCount.textContent = filteredImages.length === allImages.length
+    ? `Showing ${firstVisible}-${lastVisible} of ${allImages.length} services`
+    : `Showing ${firstVisible}-${lastVisible} of ${filteredImages.length} matching (${allImages.length} total)`;
   clearFiltersButton.hidden = !searchInput.value && !swarmFilter.value && !scanFilter.value;
+  renderPagination(pageCount);
   updateSortHeaders();
+}
+
+function renderPagination(pageCount) {
+  pageButtons.replaceChildren();
+  previousPageButton.disabled = currentPage <= 1;
+  nextPageButton.disabled = currentPage >= pageCount;
+  if (pageCount <= 1) {
+    return;
+  }
+
+  const pageNumbers = new Set([1, pageCount]);
+
+  for (let page = Math.max(1, currentPage - 1); page <= Math.min(pageCount, currentPage + 1); page++) {
+    pageNumbers.add(page);
+  }
+
+  let previousPage = 0;
+  for (const page of [...pageNumbers].sort((left, right) => left - right)) {
+    if (previousPage > 0 && page - previousPage > 1) {
+      pageButtons.append(createTextElement("span", "pagination-ellipsis", "…"));
+    }
+
+    const button = createTextElement("button", "pagination-page", String(page));
+    button.type = "button";
+    button.setAttribute("aria-label", `Page ${page}`);
+    if (page === currentPage) {
+      button.setAttribute("aria-current", "page");
+    }
+    button.addEventListener("click", () => {
+      currentPage = page;
+      renderImages();
+    });
+    pageButtons.append(button);
+    previousPage = page;
+  }
 }
 
 function updateSummary(images) {
@@ -704,6 +754,7 @@ function clearFilters() {
   searchInput.value = "";
   swarmFilter.value = "";
   scanFilter.value = "";
+    currentPage = 1;
   renderImages();
 }
 
@@ -738,6 +789,7 @@ async function loadReport() {
 
     const report = await response.json();
     allImages = Array.isArray(report.images) ? report.images : [];
+      currentPage = 1;
     const errors = Array.isArray(report.errors) ? report.errors : [];
 
     updateSwarmOptions(allImages);
@@ -762,12 +814,36 @@ async function loadReport() {
   }
 }
 
-searchInput.addEventListener("input", renderImages);
-swarmFilter.addEventListener("change", renderImages);
-scanFilter.addEventListener("change", renderImages);
+searchInput.addEventListener("input", () => {
+  currentPage = 1;
+  renderImages();
+});
+swarmFilter.addEventListener("change", () => {
+  currentPage = 1;
+  renderImages();
+});
+scanFilter.addEventListener("change", () => {
+  currentPage = 1;
+  renderImages();
+});
 clearFiltersButton.addEventListener("click", clearFilters);
 refreshButton.addEventListener("click", loadReport);
 connectPopoverDetails(summaryScanCoverageTrigger, summaryScanCoverageDetails);
+pageSizeSelect.addEventListener("change", () => {
+  pageSize = Number(pageSizeSelect.value);
+  currentPage = 1;
+  renderImages();
+});
+previousPageButton.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderImages();
+  }
+});
+nextPageButton.addEventListener("click", () => {
+  currentPage++;
+  renderImages();
+});
 
 imageRows.addEventListener("click", async event => {
   const copyButton = event.target.closest(".copy-image-button");
@@ -811,6 +887,7 @@ imageRows.addEventListener("click", async event => {
     sortDirection = -1;
   }
 
+  currentPage = 1;
   renderImages();
 });
 
