@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using ImageReport.Configuration;
@@ -20,8 +21,21 @@ public sealed class DockerImageService(
     /// </summary>
     public async Task<List<DeployedImage>> CollectAsync(CancellationToken cancellationToken)
     {
+        var stopwatch = Stopwatch.StartNew();
         logger.LogInformation("Collecting services from local Swarm {Swarm}.", options.Value.Name);
-        var services = await docker.Swarm.ListServicesAsync(new ServicesListParameters(), cancellationToken);
+        var servicesTask = docker.Swarm.ListServicesAsync(new ServicesListParameters(), cancellationToken);
+        var localImagesTask = docker.Images.ListImagesAsync(
+            new ImagesListParameters { All = true },
+            cancellationToken);
+        await Task.WhenAll(servicesTask, localImagesTask);
+
+        var services = await servicesTask;
+        var localImages = await localImagesTask;
+        logger.LogInformation(
+            "Docker service and image listing completed in {ElapsedMilliseconds} ms: {ServiceCount} services, {LocalImageCount} local images.",
+            stopwatch.ElapsedMilliseconds,
+            services.Count(),
+            localImages.Count());
         var images = services.Select(service => DockerImageReferenceParser.Parse(
             options.Value.Name,
             service.Spec.Name,
@@ -36,9 +50,6 @@ public sealed class DockerImageService(
         logger.LogInformation("Found {ServiceCount} services in local Swarm {Swarm}; matching local image metadata.",
             images.Count,
             options.Value.Name);
-        var localImages = await docker.Images.ListImagesAsync(
-            new ImagesListParameters { All = true },
-            cancellationToken);
         var localImagesByTag = new Dictionary<string, ImagesListResponse>(StringComparer.Ordinal);
 
         foreach (var localImage in localImages)

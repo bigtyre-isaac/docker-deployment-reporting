@@ -181,7 +181,12 @@ app.MapGet("/api/images", async (
         includeVulnerabilities ?? true,
         includeImageUpdates ?? true);
 
+    var phaseTimer = Stopwatch.StartNew();
     var localImages = await docker.CollectAsync(cancellationToken);
+    logger.LogInformation(
+        "Image report Docker collection completed in {ElapsedMilliseconds} ms with {ImageCount} local images.",
+        phaseTimer.ElapsedMilliseconds,
+        localImages.Count);
     var authorization = context.Request.Headers.Authorization.ToString();
 
     if (string.IsNullOrWhiteSpace(authorization)
@@ -190,20 +195,31 @@ app.MapGet("/api/images", async (
         authorization = string.Concat("Bearer ", sessionToken);
     }
 
+    phaseTimer.Restart();
     var report = await federation.AggregateAsync(
         localImages,
         includeFederated ?? true,
         authorization,
         cancellationToken);
+    logger.LogInformation(
+        "Image report federation completed in {ElapsedMilliseconds} ms with {ImageCount} images and {ErrorCount} errors.",
+        phaseTimer.ElapsedMilliseconds,
+        report.Images.Count,
+        report.Errors.Count);
 
     if ((includeVulnerabilities ?? true) || (includeImageUpdates ?? true))
     {
+        phaseTimer.Restart();
         var enrichedImages = await harbor.EnrichAsync(
             report.Images,
             cancellationToken,
             includeVulnerabilities ?? true,
             includeImageUpdates ?? true);
         report = report with { Images = enrichedImages };
+        logger.LogInformation(
+            "Image report Harbor enrichment completed in {ElapsedMilliseconds} ms for {ImageCount} images.",
+            phaseTimer.ElapsedMilliseconds,
+            report.Images.Count);
     }
 
     logger.LogInformation("Returning image report with {ImageCount} images.", report.Images.Count);

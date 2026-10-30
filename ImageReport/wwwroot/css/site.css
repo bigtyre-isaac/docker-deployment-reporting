@@ -427,7 +427,6 @@ input:focus {
 
 .report-updated:focus-visible,
 .clear-filters:focus-visible,
-.filter-search input:focus-visible,
 .filter-select select:focus-visible {
   outline: 3px solid #b7d0fb;
   outline-offset: 2px;
@@ -659,8 +658,13 @@ input:focus {
   text-decoration: underline;
 }
 
-.clear-filters[hidden] {
-  display: none;
+.clear-filters:disabled {
+  color: #99a3b2;
+  cursor: default;
+}
+
+.clear-filters:disabled:hover {
+  text-decoration: none;
 }
 
 .image-card-grid {
@@ -1082,7 +1086,6 @@ input:focus {
 
 .refresh-button:focus-visible,
 .sign-out:focus-visible,
-.filter-search input:focus-visible,
 .filter-select select:focus-visible,
 .clear-filters:focus-visible {
   outline: 2px solid #6b91ce;
@@ -1364,7 +1367,7 @@ input:focus {
 }
 
 .filter-search {
-  width: 500px;
+  width: 350px;
   min-width: 150px;
   max-width: none;
   height: 34px;
@@ -1415,10 +1418,6 @@ input:focus {
   min-height: 32px;
   padding: 0 8px;
   font-size: 10px;
-}
-
-.clear-filters[hidden] {
-  display: none;
 }
 
 .report-errors {

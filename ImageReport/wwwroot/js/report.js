@@ -548,7 +548,7 @@ function renderImages() {
   reportRowCount.textContent = filteredImages.length === allImages.length
     ? `Showing ${firstVisible}-${lastVisible} of ${allImages.length} services`
     : `Showing ${firstVisible}-${lastVisible} of ${filteredImages.length} matching (${allImages.length} total)`;
-  clearFiltersButton.hidden = !searchInput.value && !swarmFilter.value && !scanFilter.value;
+  clearFiltersButton.disabled = !searchInput.value.trim() && !swarmFilter.value && !scanFilter.value;
   renderPagination(pageCount);
 }
 
@@ -737,6 +737,7 @@ function clearFilters() {
 }
 
 async function loadReport() {
+  const refreshStartedAt = performance.now();
   refreshButton.disabled = true;
   refreshButton.classList.add("is-loading");
   reportStatus.dataset.state = "loading";
@@ -766,8 +767,9 @@ async function loadReport() {
     }
 
     const report = await response.json();
+    const responseReceivedAt = performance.now();
     allImages = Array.isArray(report.images) ? report.images : [];
-      currentPage = 1;
+    currentPage = 1;
     const errors = Array.isArray(report.errors) ? report.errors : [];
 
     updateSwarmOptions(allImages);
@@ -779,10 +781,15 @@ async function loadReport() {
       ? `${errors.length} source${errors.length === 1 ? "" : "s"} could not be collected`
       : `${allImages.length} service${allImages.length === 1 ? "" : "s"}`,
     errors);
+    const renderCompletedAt = performance.now();
+    const requestDuration = responseReceivedAt - refreshStartedAt;
+    const renderDuration = renderCompletedAt - responseReceivedAt;
+    const totalDuration = renderCompletedAt - refreshStartedAt;
     updatedAt.textContent = `Updated ${new Intl.DateTimeFormat(undefined, {
       hour: "numeric",
       minute: "2-digit"
-    }).format(new Date())}`;
+    }).format(new Date())} · ${formatDuration(totalDuration)}`;
+    updatedAt.title = `Refresh: ${formatDuration(totalDuration)} total; ${formatDuration(requestDuration)} waiting for server; ${formatDuration(renderDuration)} rendering. Server phase timings are in application logs.`;
   } catch {
     reportStatus.dataset.state = "error";
     renderReportStatus("Could not load the image report. Please try again.");
@@ -790,6 +797,12 @@ async function loadReport() {
     refreshButton.disabled = false;
     refreshButton.classList.remove("is-loading");
   }
+}
+
+function formatDuration(milliseconds) {
+  return milliseconds < 1000
+    ? `${Math.round(milliseconds)} ms`
+    : `${(milliseconds / 1000).toFixed(1)} s`;
 }
 
 searchInput.addEventListener("input", () => {
