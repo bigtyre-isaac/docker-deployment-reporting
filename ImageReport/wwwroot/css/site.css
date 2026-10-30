@@ -1082,7 +1082,6 @@ input:focus {
 
 .refresh-button:focus-visible,
 .sign-out:focus-visible,
-.severity-count:focus-visible,
 .filter-search input:focus-visible,
 .filter-select select:focus-visible,
 .clear-filters:focus-visible {
@@ -1399,6 +1398,19 @@ input:focus {
   font-size: 11px;
 }
 
+.sort-select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.sort-select select {
+  min-width: 170px;
+}
+
 .clear-filters {
   min-height: 32px;
   padding: 0 8px;
@@ -1627,8 +1639,8 @@ input:focus {
 }
 
 .image-update-status {
-  width: 21px;
-  height: 21px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -1640,8 +1652,8 @@ input:focus {
 }
 
 .image-update-status svg {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
 }
 
 .image-update-status.is-upToDate {
@@ -1891,7 +1903,6 @@ input:focus {
   font-size: 11px;
   line-height: 1;
   white-space: nowrap;
-  cursor: pointer;
 }
 
 .severity-count::before {
@@ -1901,16 +1912,6 @@ input:focus {
   border-radius: 50%;
   background: currentColor;
   content: "";
-}
-
-.severity-count:hover,
-.severity-count[aria-pressed="true"] {
-  border-color: currentColor;
-}
-
-.severity-count:focus-visible {
-  outline: 2px solid #6b91ce;
-  outline-offset: 2px;
 }
 
 .severity-count.is-critical {
@@ -1945,12 +1946,6 @@ input:focus {
 
 .severity-count-value {
   font-variant-numeric: tabular-nums;
-}
-
-.severity-sort-indicator {
-  min-width: 0;
-  font-size: 10px;
-  font-weight: 700;
 }
 
 .image-table .image-list-empty {

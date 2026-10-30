@@ -18,6 +18,7 @@ const reportRowCount = document.querySelector("#report-row-count");
 const searchInput = document.querySelector("#filter-search");
 const swarmFilter = document.querySelector("#filter-swarm");
 const scanFilter = document.querySelector("#filter-scan");
+const severitySortSelect = document.querySelector("#sort-severity");
 const clearFiltersButton = document.querySelector("#clear-filters");
 const pageSizeSelect = document.querySelector("#page-size");
 const previousPageButton = document.querySelector("#previous-page");
@@ -68,7 +69,6 @@ const scanStatusDescriptions = {
 
 let allImages = [];
 let sortField = "critical";
-let sortDirection = -1;
 let nextDigestDetailsId = 0;
 let currentPage = 1;
 let pageSize = 50;
@@ -379,20 +379,16 @@ function createDistributionBar(image) {
 }
 
 function createSeverityCount(image, severity) {
-  const button = document.createElement("button");
-  button.type = "button";
+  const badge = document.createElement("span");
   const count = getCount(image, severity);
-  button.className = `severity-count is-${severity}${count === null ? " is-unavailable" : ""}`;
-  button.dataset.sort = severity;
+  badge.className = `severity-count is-${severity}${count === null ? " is-unavailable" : ""}`;
   const countElement = createTextElement("strong", "severity-count-value", count === null ? "-" : String(count));
 
-  button.setAttribute("aria-label", `Sort by ${severityLabels[severity]}`);
-  button.append(
+  badge.append(
     createTextElement("span", "severity-count-label", severityLabels[severity]),
-    countElement,
-    createTextElement("span", "severity-sort-indicator", "")
+    countElement
   );
-  return button;
+  return badge;
 }
 
 function createImageRow(image) {
@@ -508,27 +504,10 @@ function compareImages(left, right) {
   }
 
   if (leftCount !== rightCount) {
-    return ((leftCount ?? 0) - (rightCount ?? 0)) * sortDirection;
+    return (rightCount ?? 0) - (leftCount ?? 0);
   }
 
   return (left.service ?? "").localeCompare(right.service ?? "");
-}
-
-function updateSortHeaders() {
-  for (const button of document.querySelectorAll(".severity-count")) {
-    const isActive = button.dataset.sort === sortField;
-    const label = severityLabels[button.dataset.sort];
-    const indicator = button.querySelector(".severity-sort-indicator");
-
-    button.setAttribute("aria-pressed", String(isActive));
-    button.setAttribute(
-      "aria-label",
-      isActive
-        ? `Sort by ${label}, currently ${sortDirection === -1 ? "descending" : "ascending"}`
-        : `Sort by ${label}`
-    );
-    indicator.textContent = isActive ? (sortDirection === -1 ? "↓" : "↑") : "";
-  }
 }
 
 function renderImages() {
@@ -571,7 +550,6 @@ function renderImages() {
     : `Showing ${firstVisible}-${lastVisible} of ${filteredImages.length} matching (${allImages.length} total)`;
   clearFiltersButton.hidden = !searchInput.value && !swarmFilter.value && !scanFilter.value;
   renderPagination(pageCount);
-  updateSortHeaders();
 }
 
 function renderPagination(pageCount) {
@@ -826,6 +804,11 @@ scanFilter.addEventListener("change", () => {
   currentPage = 1;
   renderImages();
 });
+severitySortSelect.addEventListener("change", () => {
+  sortField = severitySortSelect.value;
+  currentPage = 1;
+  renderImages();
+});
 clearFiltersButton.addEventListener("click", clearFilters);
 refreshButton.addEventListener("click", loadReport);
 connectPopoverDetails(summaryScanCoverageTrigger, summaryScanCoverageDetails);
@@ -874,21 +857,6 @@ imageRows.addEventListener("click", async event => {
 
     return;
   }
-
-  const button = event.target.closest(".severity-count");
-  if (!button || !severities.includes(button.dataset.sort)) {
-    return;
-  }
-
-  if (sortField === button.dataset.sort) {
-    sortDirection *= -1;
-  } else {
-    sortField = button.dataset.sort;
-    sortDirection = -1;
-  }
-
-  currentPage = 1;
-  renderImages();
 });
 
 signOutButton.addEventListener("click", async () => {
