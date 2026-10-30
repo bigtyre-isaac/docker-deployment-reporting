@@ -1401,17 +1401,37 @@ input:focus {
   font-size: 11px;
 }
 
-.sort-select {
+.vulnerability-header {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.table-sort-control {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
 }
 
-.sort-select select {
-  min-width: 170px;
+.table-sort-control select {
+  width: 90px;
+  height: 25px;
+  padding: 0 18px 0 7px;
+  border: 1px solid #dce2e9;
+  border-radius: 5px;
+  color: #34445a;
+  background-color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-sort-control select:focus-visible {
+  outline: 2px solid #6b91ce;
+  outline-offset: 2px;
 }
 
 .clear-filters {
@@ -2088,6 +2108,17 @@ input:focus {
 
   .image-table {
     min-width: 0;
+  }
+
+  .vulnerability-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+    white-space: normal;
+  }
+
+  .table-sort-control {
+    max-width: 100%;
   }
 
   .severity-counts {

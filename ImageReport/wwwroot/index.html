@@ -122,16 +122,6 @@
               <option value="unknown">Reason unavailable</option>
             </select>
           </label>
-          <label class="filter-select sort-select">
-            <span>Sort by</span>
-            <select id="sort-severity" aria-label="Sort by vulnerability severity">
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-              <option value="none">Negligible</option>
-            </select>
-          </label>
           <button id="clear-filters" class="clear-filters" type="button" disabled>Clear filters</button>
         </div>
       </div>
@@ -148,7 +138,21 @@
               <th scope="col">Service</th>
               <th scope="col">Image</th>
               <th scope="col">Scan</th>
-              <th scope="col">Vulnerability distribution</th>
+              <th scope="col">
+                <div class="vulnerability-header">
+                  <span>Vulnerability distribution</span>
+                  <label class="table-sort-control">
+                    <span>Sort by</span>
+                    <select id="sort-severity" aria-label="Sort by vulnerability severity, highest count first">
+                      <option value="critical">Critical</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                      <option value="none">Negligible</option>
+                    </select>
+                  </label>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody id="image-cards" aria-live="polite"></tbody>
