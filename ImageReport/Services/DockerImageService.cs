@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using ImageReport.Configuration;
@@ -8,20 +9,146 @@ using Microsoft.Extensions.Options;
 namespace ImageReport.Services;
 
 /// <summary>
-/// Reads deployment references directly from local Swarm service specifications.
+/// Reads deployment references from local Swarm service specifications and local image metadata.
 /// </summary>
-public sealed class DockerImageService(IDockerClient docker, IOptions<SwarmOptions> options)
+public sealed class DockerImageService(
+    IDockerClient docker,
+    IOptions<SwarmOptions> options,
+    ILogger<DockerImageService> logger)
 {
     /// <summary>
-    /// Collects every service's configured image without inspecting task containers.
+    /// Collects configured images and adds matching local image metadata when available.
     /// </summary>
     public async Task<List<DeployedImage>> CollectAsync(CancellationToken cancellationToken)
     {
-        var services = await docker.Swarm.ListServicesAsync(new ServicesListParameters(), cancellationToken);
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("Collecting services from local Swarm {Swarm}.", options.Value.Name);
+        var servicesTask = docker.Swarm.ListServicesAsync(new ServicesListParameters(), cancellationToken);
+        var localImagesTask = docker.Images.ListImagesAsync(
+            new ImagesListParameters { All = true },
+            cancellationToken);
+        await Task.WhenAll(servicesTask, localImagesTask);
 
-        return services.Select(service => DockerImageReferenceParser.Parse(
+        var services = await servicesTask;
+        var localImages = await localImagesTask;
+        logger.LogInformation(
+            "Docker service and image listing completed in {ElapsedMilliseconds} ms: {ServiceCount} services, {LocalImageCount} local images.",
+            stopwatch.ElapsedMilliseconds,
+            services.Count(),
+            localImages.Count());
+        var images = services.Select(service => DockerImageReferenceParser.Parse(
             options.Value.Name,
             service.Spec.Name,
             service.Spec.TaskTemplate.ContainerSpec.Image)).ToList();
+
+        if (images.Count == 0)
+        {
+            logger.LogInformation("Local Swarm {Swarm} has no deployed services.", options.Value.Name);
+            return images;
+        }
+
+        logger.LogInformation("Found {ServiceCount} services in local Swarm {Swarm}; matching local image metadata.",
+            images.Count,
+            options.Value.Name);
+        var localImagesByTag = new Dictionary<string, ImagesListResponse>(StringComparer.Ordinal);
+
+        foreach (var localImage in localImages)
+        {
+            foreach (var tag in localImage.RepoTags ?? [])
+            {
+                localImagesByTag.TryAdd(tag, localImage);
+            }
+        }
+
+        var deployedImages = images.Select(image =>
+        {
+            var localImage = FindLocalImage(image, localImages, localImagesByTag);
+            if (localImage is null)
+            {
+                return image;
+            }
+
+            return image with
+            {
+                LocalImageId = localImage.ID,
+                LocalRepoDigest = GetLocalRepoDigest(localImage, image.Repository, image.Digest)
+            };
+        }).ToList();
+
+        logger.LogInformation(
+            "Local Swarm collection completed: {ServiceCount} services, {MatchedImageCount} local image matches.",
+            deployedImages.Count,
+            deployedImages.Count(image => image.LocalImageId is not null));
+
+        return deployedImages;
+    }
+
+    /// <summary>
+    /// Finds the local image referenced by a tag or repository digest.
+    /// </summary>
+    private static ImagesListResponse? FindLocalImage(
+        DeployedImage image,
+        IEnumerable<ImagesListResponse> localImages,
+        IReadOnlyDictionary<string, ImagesListResponse> localImagesByTag)
+    {
+        if (image.Tag is not null)
+        {
+            var taggedReference = $"{image.Repository}:{image.Tag}";
+            return localImagesByTag.GetValueOrDefault(taggedReference);
+        }
+
+        if (image.Digest is not null)
+        {
+            return localImages.FirstOrDefault(localImage =>
+                (localImage.RepoDigests ?? []).Any(repoDigest =>
+                    string.Equals(
+                        GetRepository(repoDigest),
+                        image.Repository,
+                        StringComparison.Ordinal)
+                    && string.Equals(
+                        GetDigest(repoDigest),
+                        image.Digest,
+                        StringComparison.Ordinal)));
+        }
+
+        return localImagesByTag.GetValueOrDefault($"{image.Repository}:latest");
+    }
+
+    /// <summary>
+    /// Selects the local digest for the deployed repository, preferring the deployed digest.
+    /// </summary>
+    private static string? GetLocalRepoDigest(
+        ImagesListResponse localImage,
+        string repository,
+        string? preferredDigest)
+    {
+        var digests = (localImage.RepoDigests ?? [])
+            .Where(repoDigest => string.Equals(
+                GetRepository(repoDigest),
+                repository,
+                StringComparison.Ordinal))
+            .Select(GetDigest)
+            .ToList();
+
+        return digests.FirstOrDefault(digest => digest == preferredDigest)
+            ?? digests.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Gets the repository part of a Docker repository digest.
+    /// </summary>
+    private static string GetRepository(string repoDigest)
+    {
+        var separator = repoDigest.LastIndexOf('@');
+        return separator > 0 ? repoDigest[..separator] : string.Empty;
+    }
+
+    /// <summary>
+    /// Gets the digest part of a Docker repository digest.
+    /// </summary>
+    private static string GetDigest(string repoDigest)
+    {
+        var separator = repoDigest.LastIndexOf('@');
+        return separator > 0 ? repoDigest[(separator + 1)..] : string.Empty;
     }
 }
