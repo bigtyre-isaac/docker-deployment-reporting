@@ -2009,6 +2009,7 @@ input:focus {
 }
 
 .page-size-control {
+  flex: 0 0 auto;
   gap: 8px;
   white-space: nowrap;
 }
@@ -2025,11 +2026,14 @@ input:focus {
 }
 
 .pagination-controls {
+  flex: 0 0 auto;
   gap: 4px;
 }
 
 .page-buttons {
+  min-width: 30px;
   gap: 3px;
+  justify-content: center;
 }
 
 .pagination-page,

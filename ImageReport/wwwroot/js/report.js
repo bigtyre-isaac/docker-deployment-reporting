@@ -68,7 +68,7 @@ const scanStatusDescriptions = {
 };
 
 let allImages = [];
-let sortField = "critical";
+let sortField = "high";
 let nextDigestDetailsId = 0;
 let currentPage = 1;
 let pageSize = 50;
@@ -477,6 +477,11 @@ function getScanStatus(image) {
   return Object.hasOwn(scanStatusLabels, reason) ? reason : "unknown";
 }
 
+function getUpdateStatus(image) {
+  const status = image.imageUpdate?.status;
+  return status === "upToDate" || status === "updateAvailable" ? status : "updateUnknown";
+}
+
 function matchesFilters(image) {
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
   const searchableText = [image.swarm, image.service, image.image]
@@ -486,7 +491,10 @@ function matchesFilters(image) {
   const matchesSearch = searchTerm === "" || searchableText.includes(searchTerm);
   const matchesSwarm = swarmFilter.value === "" || image.swarm === swarmFilter.value;
   const scanStatus = getScanStatus(image);
-  const matchesScan = scanFilter.value === "" || scanStatus === scanFilter.value;
+  const updateStatus = getUpdateStatus(image);
+  const matchesScan = scanFilter.value === ""
+    || scanStatus === scanFilter.value
+    || updateStatus === scanFilter.value;
 
   return matchesSearch && matchesSwarm && matchesScan;
 }
@@ -512,8 +520,8 @@ function compareImages(left, right) {
 
 function renderImages() {
   const filteredImages = allImages.filter(matchesFilters).sort(compareImages);
-  const pageCount = Math.ceil(filteredImages.length / pageSize);
-  currentPage = Math.min(currentPage, Math.max(pageCount, 1));
+  const pageCount = Math.max(1, Math.ceil(filteredImages.length / pageSize));
+  currentPage = Math.min(currentPage, pageCount);
   const pageStart = (currentPage - 1) * pageSize;
   const pageImages = filteredImages.slice(pageStart, pageStart + pageSize);
   imageRows.replaceChildren();
@@ -556,10 +564,6 @@ function renderPagination(pageCount) {
   pageButtons.replaceChildren();
   previousPageButton.disabled = currentPage <= 1;
   nextPageButton.disabled = currentPage >= pageCount;
-  if (pageCount <= 1) {
-    return;
-  }
-
   const pageNumbers = new Set([1, pageCount]);
 
   for (let page = Math.max(1, currentPage - 1); page <= Math.min(pageCount, currentPage + 1); page++) {
