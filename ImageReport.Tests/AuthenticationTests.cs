@@ -62,6 +62,25 @@ public sealed class AuthenticationTests
     }
 
     /// <summary>
+    /// Accepts the validated browser-session cookie through the JWT bearer authentication handler.
+    /// </summary>
+    [TestMethod]
+    public async Task EndpointReadsJwtFromBrowserSessionCookie()
+    {
+        using var trustedKey = RSA.Create(2048);
+        await using var app = new ReportApplication(trustedKey.ExportSubjectPublicKeyInfoPem());
+        using var client = app.CreateClient();
+        var token = CreateToken(trustedKey, "role", "Other.Role", "issuer", false);
+        client.DefaultRequestHeaders.Add(
+            "Cookie",
+            $"{BrowserSessionCookie.Name}={token}");
+
+        using var response = await client.GetAsync("/api/images");
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>
     /// Missing, malformed, and private keys cannot produce a running authentication configuration.
     /// </summary>
     [TestMethod]

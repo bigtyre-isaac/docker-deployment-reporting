@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using ImageReport.Configuration;
@@ -23,19 +24,59 @@ public sealed class FederationService(
         string authorization,
         CancellationToken cancellationToken)
     {
-        var report = new ImageReportResponse([.. localImages], []);
+        var federatedReport = await CollectPeersAsync(
+            includeFederated,
+            authorization,
+            cancellationToken);
 
-        if (includeFederated)
+        return Aggregate(localImages, federatedReport);
+    }
+
+    /// <summary>
+    /// Collects peer inventories without requiring the local Docker inventory.
+    /// </summary>
+    public async Task<ImageReportResponse> CollectPeersAsync(
+        bool includeFederated,
+        string authorization,
+        CancellationToken cancellationToken)
+    {
+        var report = new ImageReportResponse([], []);
+
+        if (!includeFederated)
         {
-            var results = await Task.WhenAll(options.Value.Peers.Select(peer =>
-                CollectPeerAsync(peer, authorization, cancellationToken)));
-
-            foreach (var result in results)
-            {
-                report.Images.AddRange(result.Images);
-                report.Errors.AddRange(result.Errors);
-            }
+            logger.LogInformation("Federated image collection is disabled for this request.");
+            return report;
         }
+
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("Collecting images from {PeerCount} configured federated Swarms.", options.Value.Peers.Count);
+        var results = await Task.WhenAll(options.Value.Peers.Select(peer =>
+            CollectPeerAsync(peer, authorization, cancellationToken)));
+
+        foreach (var result in results)
+        {
+            report.Images.AddRange(result.Images);
+            report.Errors.AddRange(result.Errors);
+        }
+
+        logger.LogInformation(
+            "Federation collection completed in {ElapsedMilliseconds} ms with {ImageCount} images and {ErrorCount} errors.",
+            stopwatch.ElapsedMilliseconds,
+            report.Images.Count,
+            report.Errors.Count);
+        return report;
+    }
+
+    /// <summary>
+    /// Combines local and peer inventories and sorts them deterministically.
+    /// </summary>
+    public ImageReportResponse Aggregate(
+        IReadOnlyCollection<DeployedImage> localImages,
+        ImageReportResponse federatedReport)
+    {
+        var report = new ImageReportResponse(
+            [.. localImages, .. federatedReport.Images],
+            [.. federatedReport.Errors]);
 
         report.Images.Sort((left, right) =>
         {
@@ -45,6 +86,11 @@ public sealed class FederationService(
                 ? swarmOrder
                 : StringComparer.Ordinal.Compare(left.Service, right.Service);
         });
+
+        logger.LogInformation(
+            "Image aggregation completed with {ImageCount} images and {ErrorCount} collection errors.",
+            report.Images.Count,
+            report.Errors.Count);
 
         return report;
     }
@@ -59,9 +105,11 @@ public sealed class FederationService(
     {
         try
         {
+            logger.LogInformation("Requesting image inventory from federated Swarm {Peer}.", peer.Name);
             using var client = clients.CreateClient("Federation");
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                new Uri(new Uri(peer.BaseUrl), "/api/images?includeFederated=false"));
+                new Uri(new Uri(peer.BaseUrl),
+                    "/api/images?includeFederated=false&includeVulnerabilities=false&includeImageUpdates=false"));
 
             request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorization);
 
@@ -97,6 +145,11 @@ public sealed class FederationService(
                 .Select(error => new CollectionError(peer.Name, error.Message))
                 .ToList();
 
+            logger.LogInformation(
+                "Federated Swarm {Peer} returned {ImageCount} images and {ErrorCount} collection errors.",
+                peer.Name,
+                report.Images.Count,
+                errors.Count);
             return new ImageReportResponse(report.Images, errors);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
